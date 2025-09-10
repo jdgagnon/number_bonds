@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import Confetti from "react-confetti"; // <-- import confetti
-import { useWindowSize } from "react-use"; // optional, for full-screen confetti
+import Confetti from "react-confetti";
 
 function NumberLine({ max = 10, onSelect }) {
   return (
@@ -27,8 +26,6 @@ export default function NumberBondApp() {
   const [score, setScore] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
 
-  const { width, height } = useWindowSize(); // get screen size for confetti
-
   useEffect(() => {
     const newProblems = [];
     for (let i = 0; i < totalProblems; i++) {
@@ -44,6 +41,12 @@ export default function NumberBondApp() {
   if (problems.length === 0) return null;
 
   const problem = problems[currentIndex];
+  const correctAnswer =
+    problem.blank === "whole"
+      ? problem.whole
+      : problem.blank === "left"
+      ? problem.part1
+      : problem.part2;
 
   const circleRadius = 28;
   const fontSize = 20;
@@ -56,26 +59,19 @@ export default function NumberBondApp() {
   const rightCx = 200;
   const rightCy = 120;
 
-  const correctAnswer =
-    problem.blank === "whole"
-      ? problem.whole
-      : problem.blank === "left"
-      ? problem.part1
-      : problem.part2;
-
   function handleSelect(value) {
     setStudentAnswer(value);
     if (value === correctAnswer) {
       setFeedback("correct");
       setScore(score + 1);
-      setShowConfetti(true); // trigger confetti
+      setShowConfetti(true);
 
       setTimeout(() => {
-        setShowConfetti(false); // stop confetti after 1 sec
+        setShowConfetti(false);
         setCurrentIndex(currentIndex + 1);
         setStudentAnswer(null);
         setFeedback(null);
-      }, 1000);
+      }, 1200);
     } else {
       setFeedback("wrong");
     }
@@ -115,38 +111,44 @@ export default function NumberBondApp() {
 
   return (
     <div className="p-4 md:p-6 max-w-md mx-auto relative">
+      {/* Confetti burst from top circle */}
       {showConfetti && (
         <Confetti
           width={window.innerWidth}
           height={window.innerHeight}
-          recycle={false}       // one-time burst
-          numberOfPieces={300}  // more pieces
-          gravity={0.3}         // faster fall
-          initialVelocityY={{ min: 5, max: 15 }} // faster downward velocity
-          friction={0.01}       // less drag
-          wind={{ min: -0.05, max: 0.05 }}      // slight drift
-          style={{ position: "fixed", top: 0, left: 0, pointerEvents: "none", zIndex: 9999 }}
+          recycle={false}
+          numberOfPieces={300}
+          gravity={0.8}
+          initialVelocityY={{ min: 5, max: 15 }}
+          friction={0.01}
+          wind={{ min: -0.05, max: 0.05 }}
+          // start at roughly top-center of screen
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            pointerEvents: "none",
+            zIndex: 9999,
+          }}
         />
       )}
 
-      <h1 className="text-2xl font-bold mb-4 text-center">
-        Interactive Number Bonds
-      </h1>
-
+      <h1 className="text-2xl font-bold mb-4 text-center">Interactive Number Bonds</h1>
       <div className="mb-4 text-center text-lg">
         Problem {currentIndex + 1} of {totalProblems} | Score: {score}
       </div>
 
-      <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} width="100%" height="auto" className="max-w-xs mx-auto">
+      <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} width="100%" height={svgHeight} className="max-w-xs mx-auto">
+        {/* Lines connecting circles */}
         <line x1={topCx} y1={topCy + circleRadius} x2={leftCx} y2={leftCy - circleRadius} stroke="black" strokeWidth="2"/>
         <line x1={topCx} y1={topCy + circleRadius} x2={rightCx} y2={rightCy - circleRadius} stroke="black" strokeWidth="2"/>
 
+        {/* Circles with numbers */}
         {[{cx: topCx, cy: topCy, value: problem.whole, blank: "whole"},
           {cx: leftCx, cy: leftCy, value: problem.part1, blank: "left"},
           {cx: rightCx, cy: rightCy, value: problem.part2, blank: "right"}].map((c, i) => (
-          <>
+          <g key={i}>
             <circle
-              key={`circle-${i}`}
               cx={c.cx}
               cy={c.cy}
               r={circleRadius}
@@ -161,7 +163,6 @@ export default function NumberBondApp() {
               strokeWidth="2"
             />
             <text
-              key={`text-${i}`}
               x={c.cx}
               y={c.cy + fontSize / 3}
               textAnchor="middle"
@@ -170,10 +171,11 @@ export default function NumberBondApp() {
             >
               {c.blank === problem.blank ? studentAnswer || "___" : c.value}
             </text>
-          </>
+          </g>
         ))}
       </svg>
 
+      {/* Number sentences */}
       <div className="space-y-2 mt-4 text-lg text-center">
         {problem.blank === "whole" && (
           <>
@@ -195,6 +197,7 @@ export default function NumberBondApp() {
         )}
       </div>
 
+      {/* Number line buttons */}
       <NumberLine max={10} onSelect={handleSelect} />
 
       {feedback && feedback === "wrong" && (
