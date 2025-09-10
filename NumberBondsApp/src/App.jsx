@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 function NumberLine({ max = 10, onSelect }) {
   return (
@@ -17,187 +17,133 @@ function NumberLine({ max = 10, onSelect }) {
 }
 
 export default function NumberBondApp() {
-  const [problems, setProblems] = useState([]);
-  const [answers, setAnswers] = useState({});
+  const [problem, setProblem] = useState(null);
+  const [studentAnswer, setStudentAnswer] = useState(null);
+  const [feedback, setFeedback] = useState(null); // "correct" | "wrong" | null
 
-  function generateProblems(n = 6) {
-    const newProblems = [];
-    for (let i = 0; i < n; i++) {
-      const whole = Math.floor(Math.random() * 9) + 2; // 2–10
-      const part1 = Math.floor(Math.random() * (whole - 1)) + 1;
-      const part2 = whole - part1;
-      const blank = ["whole", "left", "right"][Math.floor(Math.random() * 3)];
-      newProblems.push({ whole, part1, part2, blank });
+  // Function to generate a new random problem
+  function generateProblem() {
+    const whole = Math.floor(Math.random() * 9) + 2; // 2–10
+    const part1 = Math.floor(Math.random() * (whole - 1)) + 1;
+    const part2 = whole - part1;
+    const blank = ["whole", "left", "right"][Math.floor(Math.random() * 3)];
+    setProblem({ whole, part1, part2, blank });
+    setStudentAnswer(null);
+    setFeedback(null);
+  }
+
+  useEffect(() => {
+    generateProblem(); // generate first problem on mount
+  }, []);
+
+  if (!problem) return null; // still initializing
+
+  const circleRadius = 28;
+  const fontSize = 20;
+  const svgWidth = 240;
+  const svgHeight = 160;
+  const topCx = svgWidth / 2;
+  const topCy = 32;
+  const leftCx = 40;
+  const leftCy = 120;
+  const rightCx = 200;
+  const rightCy = 120;
+
+  const correctAnswer =
+    problem.blank === "whole"
+      ? problem.whole
+      : problem.blank === "left"
+      ? problem.part1
+      : problem.part2;
+
+  function handleSelect(value) {
+    setStudentAnswer(value);
+    if (value === correctAnswer) {
+      setFeedback("correct");
+      // move to next problem after brief delay
+      setTimeout(() => generateProblem(), 500);
+    } else {
+      setFeedback("wrong");
     }
-    setProblems(newProblems);
-    setAnswers({});
-  }
-
-  function handleSelect(idx, value) {
-    setAnswers((prev) => ({ ...prev, [idx]: value }));
-  }
-
-  function getCorrectAnswer(p) {
-    if (p.blank === "whole") return p.whole;
-    if (p.blank === "left") return p.part1;
-    return p.part2;
   }
 
   return (
     <div className="p-4 md:p-6 max-w-md mx-auto">
-      <h1 className="text-2xl font-bold mb-4 text-center">
+      <h1 className="text-2xl font-bold mb-6 text-center">
         Interactive Number Bonds
       </h1>
-      <button
-        onClick={() => generateProblems(6)}
-        className="px-4 py-2 bg-blue-500 text-white rounded-lg mb-6 block mx-auto"
-      >
-        Generate Problems
-      </button>
 
-      <div className="space-y-8">
-        {problems.map((p, idx) => {
-          const studentAnswer = answers[idx];
-          const correctAnswer = getCorrectAnswer(p);
-          const isCorrect = studentAnswer === correctAnswer;
+      {/* Number bond SVG */}
+      <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} width="100%" height="auto" className="max-w-xs mx-auto">
+        {/* Lines */}
+        <line x1={topCx} y1={topCy + circleRadius} x2={leftCx} y2={leftCy - circleRadius} stroke="black" strokeWidth="2"/>
+        <line x1={topCx} y1={topCy + circleRadius} x2={rightCx} y2={rightCy - circleRadius} stroke="black" strokeWidth="2"/>
 
-          // SVG dimensions and circle positions
-          const circleRadius = 28;
-          const fontSize = 20;
-          const svgWidth = 240;
-          const svgHeight = 160;
-          const topCx = svgWidth / 2;
-          const topCy = 32;
-          const leftCx = 40;
-          const leftCy = 120;
-          const rightCx = 200;
-          const rightCy = 120;
+        {/* Circles & text */}
+        {[{cx: topCx, cy: topCy, value: problem.whole, blank: "whole"},
+          {cx: leftCx, cy: leftCy, value: problem.part1, blank: "left"},
+          {cx: rightCx, cy: rightCy, value: problem.part2, blank: "right"}].map((c, i) => (
+          <>
+            <circle
+              key={`circle-${i}`}
+              cx={c.cx}
+              cy={c.cy}
+              r={circleRadius}
+              fill={
+                c.blank === problem.blank && studentAnswer
+                  ? studentAnswer === correctAnswer
+                    ? "#d1fae5"
+                    : "#fee2e2"
+                  : "white"
+              }
+              stroke="black"
+              strokeWidth="2"
+            />
+            <text
+              key={`text-${i}`}
+              x={c.cx}
+              y={c.cy + fontSize / 3}
+              textAnchor="middle"
+              fontSize={fontSize}
+              fontWeight="bold"
+            >
+              {c.blank === problem.blank ? studentAnswer || "___" : c.value}
+            </text>
+          </>
+        ))}
+      </svg>
 
-          return (
-            <div key={idx}>
-              <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} width="100%" height="auto">
-                {/* Lines from top circle to bottom circles */}
-                <line
-                  x1={topCx}
-                  y1={topCy + circleRadius}
-                  x2={leftCx}
-                  y2={leftCy - circleRadius}
-                  stroke="black"
-                  strokeWidth="2"
-                />
-                <line
-                  x1={topCx}
-                  y1={topCy + circleRadius}
-                  x2={rightCx}
-                  y2={rightCy - circleRadius}
-                  stroke="black"
-                  strokeWidth="2"
-                />
-
-                {/* Top circle */}
-                <circle
-                  cx={topCx}
-                  cy={topCy}
-                  r={circleRadius}
-                  fill={
-                    p.blank === "whole" && studentAnswer
-                      ? isCorrect
-                        ? "#d1fae5"
-                        : "#fee2e2"
-                      : "white"
-                  }
-                  stroke="black"
-                  strokeWidth="2"
-                />
-                <text
-                  x={topCx}
-                  y={topCy + fontSize / 3}
-                  textAnchor="middle"
-                  fontSize={fontSize}
-                  fontWeight="bold"
-                >
-                  {p.blank === "whole" ? studentAnswer || "___" : p.whole}
-                </text>
-
-                {/* Left circle */}
-                <circle
-                  cx={leftCx}
-                  cy={leftCy}
-                  r={circleRadius}
-                  fill={
-                    p.blank === "left" && studentAnswer
-                      ? isCorrect
-                        ? "#d1fae5"
-                        : "#fee2e2"
-                      : "white"
-                  }
-                  stroke="black"
-                  strokeWidth="2"
-                />
-                <text
-                  x={leftCx}
-                  y={leftCy + fontSize / 3}
-                  textAnchor="middle"
-                  fontSize={fontSize}
-                  fontWeight="bold"
-                >
-                  {p.blank === "left" ? studentAnswer || "___" : p.part1}
-                </text>
-
-                {/* Right circle */}
-                <circle
-                  cx={rightCx}
-                  cy={rightCy}
-                  r={circleRadius}
-                  fill={
-                    p.blank === "right" && studentAnswer
-                      ? isCorrect
-                        ? "#d1fae5"
-                        : "#fee2e2"
-                      : "white"
-                  }
-                  stroke="black"
-                  strokeWidth="2"
-                />
-                <text
-                  x={rightCx}
-                  y={rightCy + fontSize / 3}
-                  textAnchor="middle"
-                  fontSize={fontSize}
-                  fontWeight="bold"
-                >
-                  {p.blank === "right" ? studentAnswer || "___" : p.part2}
-                </text>
-              </svg>
-
-              {/* Number sentences */}
-              <div className="space-y-2 mt-2 text-lg text-center">
-                {p.blank === "whole" && (
-                  <>
-                    <div>___ = {p.part1} + {p.part2}</div>
-                    <div>___ = {p.part2} + {p.part1}</div>
-                  </>
-                )}
-                {p.blank === "left" && (
-                  <>
-                    <div>___ + {p.part2} = {p.whole}</div>
-                    <div>{p.whole} - {p.part2} = ___</div>
-                  </>
-                )}
-                {p.blank === "right" && (
-                  <>
-                    <div>{p.part1} + ___ = {p.whole}</div>
-                    <div>{p.whole} - {p.part1} = ___</div>
-                  </>
-                )}
-              </div>
-
-              {/* Interactive number line */}
-              <NumberLine max={10} onSelect={(val) => handleSelect(idx, val)} />
-            </div>
-          );
-        })}
+      {/* Number sentences */}
+      <div className="space-y-2 mt-4 text-lg text-center">
+        {problem.blank === "whole" && (
+          <>
+            <div>___ = {problem.part1} + {problem.part2}</div>
+            <div>___ = {problem.part2} + {problem.part1}</div>
+          </>
+        )}
+        {problem.blank === "left" && (
+          <>
+            <div>___ + {problem.part2} = {problem.whole}</div>
+            <div>{problem.whole} - {problem.part2} = ___</div>
+          </>
+        )}
+        {problem.blank === "right" && (
+          <>
+            <div>{problem.part1} + ___ = {problem.whole}</div>
+            <div>{problem.whole} - {problem.part1} = ___</div>
+          </>
+        )}
       </div>
+
+      {/* Number line */}
+      <NumberLine max={10} onSelect={handleSelect} />
+
+      {/* Feedback */}
+      {feedback && (
+        <div className={`mt-4 text-center font-bold text-xl ${feedback === "correct" ? "text-green-600" : "text-red-600"}`}>
+          {feedback === "correct" ? "Correct!" : "Try again"}
+        </div>
+      )}
     </div>
   );
 }
