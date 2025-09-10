@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Confetti from "react-confetti";
 
 // Utility to generate random number bond problems
@@ -7,7 +7,6 @@ const generateProblem = () => {
   const part2 = Math.floor(Math.random() * 6) + 1;
   const whole = part1 + part2;
 
-  // Randomly decide which part is blank
   const blanks = ["whole", "left", "right"];
   const blank = blanks[Math.floor(Math.random() * blanks.length)];
 
@@ -19,7 +18,6 @@ const NumberBondApp = () => {
   const [studentAnswer, setStudentAnswer] = useState(null);
   const [feedback, setFeedback] = useState("");
   const [showConfetti, setShowConfetti] = useState(false);
-
   const [currentSentenceIdx, setCurrentSentenceIdx] = useState(0);
 
   // Generate number sentences for the current problem
@@ -33,7 +31,6 @@ const NumberBondApp = () => {
   const sentences = generateSentences(problem);
   const activeSentence = sentences[currentSentenceIdx];
 
-  // Move to the next problem
   const moveToNextProblem = () => {
     setProblem(generateProblem());
     setStudentAnswer(null);
@@ -42,7 +39,6 @@ const NumberBondApp = () => {
     setCurrentSentenceIdx(0);
   };
 
-  // Handle number bond answer
   const handleBondAnswer = (val) => {
     let correctAnswer =
       problem.blank === "whole"
@@ -56,7 +52,6 @@ const NumberBondApp = () => {
       setFeedback("✅ Correct!");
       setShowConfetti(true);
 
-      // After delay, hide confetti & move to sentences
       setTimeout(() => {
         setShowConfetti(false);
         setFeedback("");
@@ -66,7 +61,6 @@ const NumberBondApp = () => {
     }
   };
 
-  // Handle number sentence answer
   const handleSentenceAnswer = (val) => {
     if (val === activeSentence.answer) {
       setFeedback("✅ Correct!");
@@ -87,72 +81,67 @@ const NumberBondApp = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-blue-100">
-      <div className="p-6 border rounded-2xl shadow bg-white w-full max-w-md text-center">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 relative overflow-hidden">
+      {/* Confetti overlay, full screen */}
+      {showConfetti && (
+        <Confetti
+          width={window.innerWidth}
+          height={window.innerHeight}
+          recycle={false}
+          numberOfPieces={300}
+          gravity={0.3}
+          className="fixed top-0 left-0 z-50"
+        />
+      )}
+
+      <div className="p-6 border rounded-2xl shadow bg-white w-full max-w-md text-center relative z-10">
         {/* Number bond diagram */}
-        <svg width="250" height="160">
-          {/* Lines */}
-          <line
-            x1="125"
-            y1="40"
-            x2="70"
-            y2="120"
-            stroke="black"
-            strokeWidth="2"
-          />
-          <line
-            x1="125"
-            y1="40"
-            x2="180"
-            y2="120"
-            stroke="black"
-            strokeWidth="2"
-          />
+        <div className="flex justify-center">
+          <svg width="250" height="160">
+            <line
+              x1="125"
+              y1="40"
+              x2="70"
+              y2="120"
+              stroke="black"
+              strokeWidth="2"
+            />
+            <line
+              x1="125"
+              y1="40"
+              x2="180"
+              y2="120"
+              stroke="black"
+              strokeWidth="2"
+            />
 
-          {/* Top circle */}
-          <circle cx="125" cy="40" r="28" fill="white" stroke="black" />
-          <text
-            x="125"
-            y="45"
-            fontSize="20"
-            textAnchor="middle"
-            alignmentBaseline="middle"
-          >
-            {problem.blank === "whole"
-              ? studentAnswer || "___"
-              : problem.whole}
-          </text>
+            {/* Top circle */}
+            <circle cx="125" cy="40" r="28" fill="white" stroke="black" />
+            <text x="125" y="45" fontSize="20" textAnchor="middle">
+              {problem.blank === "whole"
+                ? studentAnswer || "___"
+                : problem.whole}
+            </text>
 
-          {/* Bottom left circle */}
-          <circle cx="70" cy="120" r="28" fill="white" stroke="black" />
-          <text
-            x="70"
-            y="125"
-            fontSize="20"
-            textAnchor="middle"
-            alignmentBaseline="middle"
-          >
-            {problem.blank === "left"
-              ? studentAnswer || "___"
-              : problem.part1}
-          </text>
+            {/* Bottom left circle */}
+            <circle cx="70" cy="120" r="28" fill="white" stroke="black" />
+            <text x="70" y="125" fontSize="20" textAnchor="middle">
+              {problem.blank === "left"
+                ? studentAnswer || "___"
+                : problem.part1}
+            </text>
 
-          {/* Bottom right circle */}
-          <circle cx="180" cy="120" r="28" fill="white" stroke="black" />
-          <text
-            x="180"
-            y="125"
-            fontSize="20"
-            textAnchor="middle"
-            alignmentBaseline="middle"
-          >
-            {problem.blank === "right"
-              ? studentAnswer || "___"
-              : problem.part2}
-          </text>
-        </svg>
+            {/* Bottom right circle */}
+            <circle cx="180" cy="120" r="28" fill="white" stroke="black" />
+            <text x="180" y="125" fontSize="20" textAnchor="middle">
+              {problem.blank === "right"
+                ? studentAnswer || "___"
+                : problem.part2}
+            </text>
+          </svg>
+        </div>
 
-        {/* Number line for answering bond */}
+        {/* Number line for bond */}
         {!studentAnswer && (
           <div className="mt-4 flex justify-center flex-wrap gap-2">
             {Array.from({ length: 11 }, (_, i) => (
@@ -167,13 +156,10 @@ const NumberBondApp = () => {
           </div>
         )}
 
-        {/* Number sentence stage */}
+        {/* Number sentences */}
         {studentAnswer && (
           <div className="mt-6">
-            <div className="text-xl font-bold mb-4">
-              {activeSentence.text}
-            </div>
-
+            <div className="text-xl font-bold mb-4">{activeSentence.text}</div>
             <div className="flex justify-center flex-wrap gap-2">
               {Array.from({ length: 11 }, (_, i) => (
                 <button
@@ -189,9 +175,6 @@ const NumberBondApp = () => {
         )}
 
         <p className="mt-3">{feedback}</p>
-        {showConfetti && (
-          <Confetti width={window.innerWidth} height={window.innerHeight} />
-        )}
       </div>
     </div>
   );
