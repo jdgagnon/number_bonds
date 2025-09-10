@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import Confetti from "react-confetti"; // <-- import confetti
+import { useWindowSize } from "react-use"; // optional, for full-screen confetti
 
 function NumberLine({ max = 10, onSelect }) {
   return (
@@ -23,7 +25,9 @@ export default function NumberBondApp() {
   const [studentAnswer, setStudentAnswer] = useState(null);
   const [feedback, setFeedback] = useState(null);
   const [score, setScore] = useState(0);
-  const [animateCorrect, setAnimateCorrect] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+
+  const { width, height } = useWindowSize(); // get screen size for confetti
 
   useEffect(() => {
     const newProblems = [];
@@ -63,19 +67,17 @@ export default function NumberBondApp() {
     setStudentAnswer(value);
     if (value === correctAnswer) {
       setFeedback("correct");
-      setAnimateCorrect(true);
       setScore(score + 1);
+      setShowConfetti(true); // trigger confetti
 
-      // Move to next problem after animation
       setTimeout(() => {
+        setShowConfetti(false); // stop confetti after 1 sec
         setCurrentIndex(currentIndex + 1);
         setStudentAnswer(null);
         setFeedback(null);
-        setAnimateCorrect(false);
-      }, 700);
+      }, 1000);
     } else {
       setFeedback("wrong");
-      setAnimateCorrect(false);
     }
   }
 
@@ -92,7 +94,7 @@ export default function NumberBondApp() {
             setCurrentIndex(0);
             setStudentAnswer(null);
             setFeedback(null);
-            setAnimateCorrect(false);
+            setShowConfetti(false);
             const newProblems = [];
             for (let i = 0; i < totalProblems; i++) {
               const whole = Math.floor(Math.random() * 9) + 2;
@@ -112,17 +114,29 @@ export default function NumberBondApp() {
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-md mx-auto">
+    <div className="p-4 md:p-6 max-w-md mx-auto relative">
+      {showConfetti && (
+        <Confetti
+          width={window.innerWidth}
+          height={window.innerHeight}
+          recycle={false}       // one-time burst
+          numberOfPieces={300}  // more pieces
+          gravity={0.3}         // faster fall
+          initialVelocityY={{ min: 5, max: 15 }} // faster downward velocity
+          friction={0.01}       // less drag
+          wind={{ min: -0.05, max: 0.05 }}      // slight drift
+          style={{ position: "fixed", top: 0, left: 0, pointerEvents: "none", zIndex: 9999 }}
+        />
+      )}
+
       <h1 className="text-2xl font-bold mb-4 text-center">
         Interactive Number Bonds
       </h1>
 
-      {/* Progress tracker */}
       <div className="mb-4 text-center text-lg">
         Problem {currentIndex + 1} of {totalProblems} | Score: {score}
       </div>
 
-      {/* Number bond SVG */}
       <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} width="100%" height="auto" className="max-w-xs mx-auto">
         <line x1={topCx} y1={topCy + circleRadius} x2={leftCx} y2={leftCy - circleRadius} stroke="black" strokeWidth="2"/>
         <line x1={topCx} y1={topCy + circleRadius} x2={rightCx} y2={rightCy - circleRadius} stroke="black" strokeWidth="2"/>
@@ -145,7 +159,6 @@ export default function NumberBondApp() {
               }
               stroke="black"
               strokeWidth="2"
-              className={animateCorrect && c.blank === problem.blank ? "transition-all duration-500 scale-110" : ""}
             />
             <text
               key={`text-${i}`}
@@ -161,7 +174,6 @@ export default function NumberBondApp() {
         ))}
       </svg>
 
-      {/* Number sentences */}
       <div className="space-y-2 mt-4 text-lg text-center">
         {problem.blank === "whole" && (
           <>
@@ -183,14 +195,10 @@ export default function NumberBondApp() {
         )}
       </div>
 
-      {/* Number line */}
       <NumberLine max={10} onSelect={handleSelect} />
 
-      {/* Feedback */}
-      {feedback && (
-        <div className={`mt-4 text-center font-bold text-xl ${feedback === "correct" ? "text-green-600" : "text-red-600"}`}>
-          {feedback === "correct" ? "Correct!" : "Try again"}
-        </div>
+      {feedback && feedback === "wrong" && (
+        <div className="mt-4 text-center font-bold text-xl text-red-600">Try again</div>
       )}
     </div>
   );
