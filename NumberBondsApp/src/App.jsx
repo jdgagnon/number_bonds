@@ -2,12 +2,12 @@ import React, { useState, useEffect } from "react";
 
 function NumberLine({ max = 10, onSelect }) {
   return (
-    <div className="flex justify-center space-x-4 mt-4">
+    <div className="flex justify-center flex-wrap gap-3 mt-4">
       {Array.from({ length: max }, (_, i) => i + 1).map((num) => (
         <button
           key={num}
           onClick={() => onSelect(num)}
-          className="w-12 h-12 text-lg rounded-full border flex items-center justify-center hover:bg-blue-100"
+          className="w-16 h-16 text-xl rounded-full border flex items-center justify-center hover:bg-blue-100 transition transform active:scale-95"
         >
           {num}
         </button>
@@ -23,8 +23,8 @@ export default function NumberBondApp() {
   const [studentAnswer, setStudentAnswer] = useState(null);
   const [feedback, setFeedback] = useState(null);
   const [score, setScore] = useState(0);
+  const [animateCorrect, setAnimateCorrect] = useState(false);
 
-  // Generate all problems at the start
   useEffect(() => {
     const newProblems = [];
     for (let i = 0; i < totalProblems; i++) {
@@ -37,7 +37,7 @@ export default function NumberBondApp() {
     setProblems(newProblems);
   }, []);
 
-  if (problems.length === 0) return null; // still initializing
+  if (problems.length === 0) return null;
 
   const problem = problems[currentIndex];
 
@@ -63,26 +63,28 @@ export default function NumberBondApp() {
     setStudentAnswer(value);
     if (value === correctAnswer) {
       setFeedback("correct");
+      setAnimateCorrect(true);
       setScore(score + 1);
-      // Move to next problem after brief delay
+
+      // Move to next problem after animation
       setTimeout(() => {
         setCurrentIndex(currentIndex + 1);
         setStudentAnswer(null);
         setFeedback(null);
-      }, 500);
+        setAnimateCorrect(false);
+      }, 700);
     } else {
       setFeedback("wrong");
+      setAnimateCorrect(false);
     }
   }
 
-  // If finished all problems, show completion screen
   if (currentIndex >= totalProblems) {
     return (
       <div className="p-4 md:p-6 max-w-md mx-auto text-center">
         <h1 className="text-2xl font-bold mb-4">All Done!</h1>
         <p className="text-lg mb-2">
-          You got <span className="font-bold">{score}</span> out of{" "}
-          {totalProblems} correct.
+          You got <span className="font-bold">{score}</span> out of {totalProblems} correct.
         </p>
         <button
           onClick={() => {
@@ -90,7 +92,7 @@ export default function NumberBondApp() {
             setCurrentIndex(0);
             setStudentAnswer(null);
             setFeedback(null);
-            // Regenerate new problems
+            setAnimateCorrect(false);
             const newProblems = [];
             for (let i = 0; i < totalProblems; i++) {
               const whole = Math.floor(Math.random() * 9) + 2;
@@ -122,11 +124,9 @@ export default function NumberBondApp() {
 
       {/* Number bond SVG */}
       <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} width="100%" height="auto" className="max-w-xs mx-auto">
-        {/* Lines */}
         <line x1={topCx} y1={topCy + circleRadius} x2={leftCx} y2={leftCy - circleRadius} stroke="black" strokeWidth="2"/>
         <line x1={topCx} y1={topCy + circleRadius} x2={rightCx} y2={rightCy - circleRadius} stroke="black" strokeWidth="2"/>
 
-        {/* Circles & text */}
         {[{cx: topCx, cy: topCy, value: problem.whole, blank: "whole"},
           {cx: leftCx, cy: leftCy, value: problem.part1, blank: "left"},
           {cx: rightCx, cy: rightCy, value: problem.part2, blank: "right"}].map((c, i) => (
@@ -145,6 +145,7 @@ export default function NumberBondApp() {
               }
               stroke="black"
               strokeWidth="2"
+              className={animateCorrect && c.blank === problem.blank ? "transition-all duration-500 scale-110" : ""}
             />
             <text
               key={`text-${i}`}
