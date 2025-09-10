@@ -17,26 +17,29 @@ function NumberLine({ max = 10, onSelect }) {
 }
 
 export default function NumberBondApp() {
-  const [problem, setProblem] = useState(null);
+  const totalProblems = 10;
+  const [problems, setProblems] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [studentAnswer, setStudentAnswer] = useState(null);
-  const [feedback, setFeedback] = useState(null); // "correct" | "wrong" | null
+  const [feedback, setFeedback] = useState(null);
+  const [score, setScore] = useState(0);
 
-  // Function to generate a new random problem
-  function generateProblem() {
-    const whole = Math.floor(Math.random() * 9) + 2; // 2–10
-    const part1 = Math.floor(Math.random() * (whole - 1)) + 1;
-    const part2 = whole - part1;
-    const blank = ["whole", "left", "right"][Math.floor(Math.random() * 3)];
-    setProblem({ whole, part1, part2, blank });
-    setStudentAnswer(null);
-    setFeedback(null);
-  }
-
+  // Generate all problems at the start
   useEffect(() => {
-    generateProblem(); // generate first problem on mount
+    const newProblems = [];
+    for (let i = 0; i < totalProblems; i++) {
+      const whole = Math.floor(Math.random() * 9) + 2;
+      const part1 = Math.floor(Math.random() * (whole - 1)) + 1;
+      const part2 = whole - part1;
+      const blank = ["whole", "left", "right"][Math.floor(Math.random() * 3)];
+      newProblems.push({ whole, part1, part2, blank });
+    }
+    setProblems(newProblems);
   }, []);
 
-  if (!problem) return null; // still initializing
+  if (problems.length === 0) return null; // still initializing
+
+  const problem = problems[currentIndex];
 
   const circleRadius = 28;
   const fontSize = 20;
@@ -60,18 +63,62 @@ export default function NumberBondApp() {
     setStudentAnswer(value);
     if (value === correctAnswer) {
       setFeedback("correct");
-      // move to next problem after brief delay
-      setTimeout(() => generateProblem(), 500);
+      setScore(score + 1);
+      // Move to next problem after brief delay
+      setTimeout(() => {
+        setCurrentIndex(currentIndex + 1);
+        setStudentAnswer(null);
+        setFeedback(null);
+      }, 500);
     } else {
       setFeedback("wrong");
     }
   }
 
+  // If finished all problems, show completion screen
+  if (currentIndex >= totalProblems) {
+    return (
+      <div className="p-4 md:p-6 max-w-md mx-auto text-center">
+        <h1 className="text-2xl font-bold mb-4">All Done!</h1>
+        <p className="text-lg mb-2">
+          You got <span className="font-bold">{score}</span> out of{" "}
+          {totalProblems} correct.
+        </p>
+        <button
+          onClick={() => {
+            setScore(0);
+            setCurrentIndex(0);
+            setStudentAnswer(null);
+            setFeedback(null);
+            // Regenerate new problems
+            const newProblems = [];
+            for (let i = 0; i < totalProblems; i++) {
+              const whole = Math.floor(Math.random() * 9) + 2;
+              const part1 = Math.floor(Math.random() * (whole - 1)) + 1;
+              const part2 = whole - part1;
+              const blank = ["whole", "left", "right"][Math.floor(Math.random() * 3)];
+              newProblems.push({ whole, part1, part2, blank });
+            }
+            setProblems(newProblems);
+          }}
+          className="px-4 py-2 bg-blue-500 text-white rounded-lg mt-4"
+        >
+          Play Again
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 md:p-6 max-w-md mx-auto">
-      <h1 className="text-2xl font-bold mb-6 text-center">
+      <h1 className="text-2xl font-bold mb-4 text-center">
         Interactive Number Bonds
       </h1>
+
+      {/* Progress tracker */}
+      <div className="mb-4 text-center text-lg">
+        Problem {currentIndex + 1} of {totalProblems} | Score: {score}
+      </div>
 
       {/* Number bond SVG */}
       <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} width="100%" height="auto" className="max-w-xs mx-auto">
