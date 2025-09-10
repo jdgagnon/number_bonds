@@ -22,9 +22,9 @@ export default function NumberBondApp() {
   const [problems, setProblems] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [studentAnswer, setStudentAnswer] = useState(null);
-  const [feedback, setFeedback] = useState(null);
   const [score, setScore] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [confettiPos, setConfettiPos] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     const newProblems = [];
@@ -48,6 +48,7 @@ export default function NumberBondApp() {
       ? problem.part1
       : problem.part2;
 
+  // Circle & SVG dimensions
   const circleRadius = 28;
   const fontSize = 20;
   const svgWidth = 240;
@@ -62,18 +63,20 @@ export default function NumberBondApp() {
   function handleSelect(value) {
     setStudentAnswer(value);
     if (value === correctAnswer) {
-      setFeedback("correct");
-      setScore(score + 1);
+      // get top circle position
+      const rect = document
+        .getElementById("top-circle")
+        .getBoundingClientRect();
+      setConfettiPos({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+
       setShowConfetti(true);
+      setScore(score + 1);
 
       setTimeout(() => {
         setShowConfetti(false);
         setCurrentIndex(currentIndex + 1);
         setStudentAnswer(null);
-        setFeedback(null);
       }, 1200);
-    } else {
-      setFeedback("wrong");
     }
   }
 
@@ -89,8 +92,6 @@ export default function NumberBondApp() {
             setScore(0);
             setCurrentIndex(0);
             setStudentAnswer(null);
-            setFeedback(null);
-            setShowConfetti(false);
             const newProblems = [];
             for (let i = 0; i < totalProblems; i++) {
               const whole = Math.floor(Math.random() * 9) + 2;
@@ -111,25 +112,22 @@ export default function NumberBondApp() {
 
   return (
     <div className="p-4 md:p-6 max-w-md mx-auto relative">
-      {/* Confetti burst from top circle */}
+      {/* Confetti overlay */}
       {showConfetti && (
         <Confetti
           width={window.innerWidth}
           height={window.innerHeight}
-          recycle={false}
           numberOfPieces={300}
-          gravity={0.8}
-          initialVelocityY={{ min: 5, max: 15 }}
-          friction={0.01}
-          wind={{ min: -0.05, max: 0.05 }}
-          // start at roughly top-center of screen
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            pointerEvents: "none",
-            zIndex: 9999,
+          recycle={false}
+          gravity={0.3}
+          confettiSource={{
+            x: confettiPos.x,
+            y: confettiPos.y,
+            w: 10,
+            h: 10,
           }}
+          run={showConfetti}
+          style={{ position: "fixed", top: 0, left: 0, pointerEvents: "none", zIndex: 9999 }}
         />
       )}
 
@@ -138,42 +136,47 @@ export default function NumberBondApp() {
         Problem {currentIndex + 1} of {totalProblems} | Score: {score}
       </div>
 
-      <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} width="100%" height={svgHeight} className="max-w-xs mx-auto">
-        {/* Lines connecting circles */}
-        <line x1={topCx} y1={topCy + circleRadius} x2={leftCx} y2={leftCy - circleRadius} stroke="black" strokeWidth="2"/>
-        <line x1={topCx} y1={topCy + circleRadius} x2={rightCx} y2={rightCy - circleRadius} stroke="black" strokeWidth="2"/>
+      <div className="mx-auto max-w-xs">
+        <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} width="100%" height={svgHeight}>
+          {/* Lines connecting circles */}
+          <line x1={topCx} y1={topCy + circleRadius} x2={leftCx} y2={leftCy - circleRadius} stroke="black" strokeWidth="2"/>
+          <line x1={topCx} y1={topCy + circleRadius} x2={rightCx} y2={rightCy - circleRadius} stroke="black" strokeWidth="2"/>
 
-        {/* Circles with numbers */}
-        {[{cx: topCx, cy: topCy, value: problem.whole, blank: "whole"},
-          {cx: leftCx, cy: leftCy, value: problem.part1, blank: "left"},
-          {cx: rightCx, cy: rightCy, value: problem.part2, blank: "right"}].map((c, i) => (
-          <g key={i}>
-            <circle
-              cx={c.cx}
-              cy={c.cy}
-              r={circleRadius}
-              fill={
-                c.blank === problem.blank && studentAnswer
-                  ? studentAnswer === correctAnswer
-                    ? "#d1fae5"
-                    : "#fee2e2"
-                  : "white"
-              }
-              stroke="black"
-              strokeWidth="2"
-            />
-            <text
-              x={c.cx}
-              y={c.cy + fontSize / 3}
-              textAnchor="middle"
-              fontSize={fontSize}
-              fontWeight="bold"
-            >
-              {c.blank === problem.blank ? studentAnswer || "___" : c.value}
-            </text>
-          </g>
-        ))}
-      </svg>
+          {/* Circles */}
+          {[
+            { cx: topCx, cy: topCy, value: problem.whole, blank: "whole", id: "top-circle" },
+            { cx: leftCx, cy: leftCy, value: problem.part1, blank: "left" },
+            { cx: rightCx, cy: rightCy, value: problem.part2, blank: "right" },
+          ].map((c, i) => (
+            <g key={i}>
+              <circle
+                id={c.id}
+                cx={c.cx}
+                cy={c.cy}
+                r={circleRadius}
+                fill={
+                  c.blank === problem.blank && studentAnswer
+                    ? studentAnswer === correctAnswer
+                      ? "#d1fae5"
+                      : "#fee2e2"
+                    : "white"
+                }
+                stroke="black"
+                strokeWidth="2"
+              />
+              <text
+                x={c.cx}
+                y={c.cy + fontSize / 3}
+                textAnchor="middle"
+                fontSize={fontSize}
+                fontWeight="bold"
+              >
+                {c.blank === problem.blank ? studentAnswer || "___" : c.value}
+              </text>
+            </g>
+          ))}
+        </svg>
+      </div>
 
       {/* Number sentences */}
       <div className="space-y-2 mt-4 text-lg text-center">
@@ -197,10 +200,9 @@ export default function NumberBondApp() {
         )}
       </div>
 
-      {/* Number line buttons */}
       <NumberLine max={10} onSelect={handleSelect} />
 
-      {feedback && feedback === "wrong" && (
+      {studentAnswer && studentAnswer !== correctAnswer && (
         <div className="mt-4 text-center font-bold text-xl text-red-600">Try again</div>
       )}
     </div>
