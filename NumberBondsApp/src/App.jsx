@@ -22,9 +22,11 @@ export default function NumberBondApp() {
   const [problems, setProblems] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [studentAnswer, setStudentAnswer] = useState(null);
+  const [sentenceAnswers, setSentenceAnswers] = useState({});
   const [score, setScore] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
   const [confettiPos, setConfettiPos] = useState({ x: 0, y: 0 });
+  const [stage, setStage] = useState("bond"); // "bond" | "sentences"
 
   useEffect(() => {
     const newProblems = [];
@@ -63,21 +65,44 @@ export default function NumberBondApp() {
   function handleSelect(value) {
     setStudentAnswer(value);
     if (value === correctAnswer) {
-      // get top circle position
       const rect = document
         .getElementById("top-circle")
         .getBoundingClientRect();
       setConfettiPos({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
-
       setShowConfetti(true);
       setScore(score + 1);
 
       setTimeout(() => {
         setShowConfetti(false);
-        setCurrentIndex(currentIndex + 1);
-        setStudentAnswer(null);
+        setStage("sentences");
+        setSentenceAnswers({});
       }, 1200);
     }
+  }
+
+  function handleSentenceChange(key, val) {
+    setSentenceAnswers((prev) => ({ ...prev, [key]: val }));
+  }
+
+  function checkSentencesComplete() {
+    const expected =
+      problem.blank === "whole"
+        ? [problem.whole, problem.whole]
+        : problem.blank === "left"
+        ? [problem.part1, problem.part1]
+        : [problem.part2, problem.part2];
+
+    return (
+      Object.keys(sentenceAnswers).length === expected.length &&
+      expected.every((v, i) => Number(sentenceAnswers[i]) === v)
+    );
+  }
+
+  function moveToNextProblem() {
+    setCurrentIndex(currentIndex + 1);
+    setStudentAnswer(null);
+    setStage("bond");
+    setSentenceAnswers({});
   }
 
   if (currentIndex >= totalProblems) {
@@ -92,6 +117,7 @@ export default function NumberBondApp() {
             setScore(0);
             setCurrentIndex(0);
             setStudentAnswer(null);
+            setStage("bond");
             const newProblems = [];
             for (let i = 0; i < totalProblems; i++) {
               const whole = Math.floor(Math.random() * 9) + 2;
@@ -139,8 +165,22 @@ export default function NumberBondApp() {
       <div className="mx-auto max-w-xs">
         <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} width="100%" height={svgHeight}>
           {/* Lines connecting circles */}
-          <line x1={topCx} y1={topCy + circleRadius} x2={leftCx} y2={leftCy - circleRadius} stroke="black" strokeWidth="2"/>
-          <line x1={topCx} y1={topCy + circleRadius} x2={rightCx} y2={rightCy - circleRadius} stroke="black" strokeWidth="2"/>
+          <line
+            x1={topCx}
+            y1={topCy + circleRadius}
+            x2={leftCx}
+            y2={leftCy - circleRadius}
+            stroke="black"
+            strokeWidth="2"
+          />
+          <line
+            x1={topCx}
+            y1={topCy + circleRadius}
+            x2={rightCx}
+            y2={rightCy - circleRadius}
+            stroke="black"
+            strokeWidth="2"
+          />
 
           {/* Circles */}
           {[
@@ -155,10 +195,8 @@ export default function NumberBondApp() {
                 cy={c.cy}
                 r={circleRadius}
                 fill={
-                  c.blank === problem.blank && studentAnswer
-                    ? studentAnswer === correctAnswer
-                      ? "#d1fae5"
-                      : "#fee2e2"
+                  c.blank === problem.blank && stage === "sentences"
+                    ? "#d1fae5"
                     : "white"
                 }
                 stroke="black"
@@ -171,39 +209,52 @@ export default function NumberBondApp() {
                 fontSize={fontSize}
                 fontWeight="bold"
               >
-                {c.blank === problem.blank ? studentAnswer || "___" : c.value}
+                {c.blank === problem.blank && stage === "bond"
+                  ? studentAnswer || "___"
+                  : c.value}
               </text>
             </g>
           ))}
         </svg>
       </div>
 
-      {/* Number sentences */}
-      <div className="space-y-2 mt-4 text-lg text-center">
-        {problem.blank === "whole" && (
-          <>
-            <div>___ = {problem.part1} + {problem.part2}</div>
-            <div>___ = {problem.part2} + {problem.part1}</div>
-          </>
-        )}
-        {problem.blank === "left" && (
-          <>
-            <div>___ + {problem.part2} = {problem.whole}</div>
-            <div>{problem.whole} - {problem.part2} = ___</div>
-          </>
-        )}
-        {problem.blank === "right" && (
-          <>
-            <div>{problem.part1} + ___ = {problem.whole}</div>
-            <div>{problem.whole} - {problem.part1} = ___</div>
-          </>
-        )}
-      </div>
+      {stage === "bond" && <NumberLine max={10} onSelect={handleSelect} />}
 
-      <NumberLine max={10} onSelect={handleSelect} />
-
-      {studentAnswer && studentAnswer !== correctAnswer && (
-        <div className="mt-4 text-center font-bold text-xl text-red-600">Try again</div>
+      {stage === "sentences" && (
+        <div className="space-y-2 mt-4 text-lg text-center">
+          {["sentence0", "sentence1"].map((s, i) => {
+            let left, right;
+            if (problem.blank === "whole") {
+              left = "___";
+              right = i === 0 ? `${problem.part1} + ${problem.part2}` : `${problem.part2} + ${problem.part1}`;
+            } else if (problem.blank === "left") {
+              left = i === 0 ? "___" : `${problem.whole} - ${problem.part2}`;
+              right = i === 0 ? `+ ${problem.part2} = ${problem.whole}` : "";
+            } else {
+              left = i === 0 ? `${problem.part1} + ___ = ${problem.whole}` : "";
+              right = "";
+            }
+            return (
+              <div key={i} className="flex justify-center gap-2 items-center">
+                <input
+                  type="number"
+                  value={sentenceAnswers[i] || ""}
+                  onChange={(e) => handleSentenceChange(i, e.target.value)}
+                  className="w-16 p-1 border rounded text-center text-lg"
+                />
+                <span>{right}</span>
+              </div>
+            );
+          })}
+          <button
+            onClick={() => {
+              if (checkSentencesComplete()) moveToNextProblem();
+            }}
+            className="px-4 py-2 bg-green-500 text-white rounded mt-2"
+          >
+            Submit
+          </button>
+        </div>
       )}
     </div>
   );
