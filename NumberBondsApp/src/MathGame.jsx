@@ -127,13 +127,37 @@ const MathGame = () => {
 
       <ProgressBar progress={progress} goal={goal} />
 
-      {/* --- Main Game Card --- */}
+       {/* --- Main Game Card --- */}
+      {/* Make this parent div 'relative' for absolute positioning of confetti */}
       <motion.div 
-        key={problem.whole + problem.part1} // This forces re-animation on new problems
+        key={problem.whole + problem.part1} 
         initial={{ opacity: 0, y: -50, rotate: -5 }}
         animate={{ opacity: 1, y: 0, rotate: 0 }}
-        className="relative w-full max-w-sm p-6 bg-white rounded-3xl shadow-2xl border-4 border-purple-300"
+        className="relative w-full max-w-sm p-6 bg-white rounded-3xl shadow-2xl border-4 border-purple-300 overflow-hidden" // Added overflow-hidden to contain confetti
       >
+        {/* Confetti burst - now positioned absolutely within the card */}
+        {showConfetti && (
+          <Confetti
+            // Remove width and height props; Confetti will adapt to its parent's size
+            // width={width}
+            // height={height}
+            recycle={false}
+            numberOfPieces={200} // A few less pieces for a contained burst
+            gravity={0.1} // Less gravity for a gentle fall within the card
+            initialVelocityY={-5} // Less initial velocity
+            // Position it absolutely to cover the card
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              zIndex: 50,
+              pointerEvents: "none",
+            }}
+          />
+        )}
+
         {/* --- The Question Area --- */}
         <div className="text-center min-h-[180px]">
           {stage === 'bond' ? (
@@ -145,7 +169,7 @@ const MathGame = () => {
           )}
         </div>
         
-        {/* --- Feedback Message --- */}
+        {/* Feedback Message */}
         <div className="text-center h-8 my-2 text-2xl font-semibold">
           {feedback.message && (
              <motion.p
@@ -159,7 +183,7 @@ const MathGame = () => {
           )}
         </div>
         
-        {/* --- Number Pad --- */}
+        {/* Number Pad */}
         <NumberPad 
           maxNumber={maxTotal} 
           onNumberClick={handleAnswer} 
