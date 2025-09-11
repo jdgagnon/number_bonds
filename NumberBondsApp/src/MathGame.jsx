@@ -6,6 +6,8 @@ import NumberPad from "./NumberPad";
 import ProgressBar from "./ProgressBar";
 import StarTracker from './StarTracker';
 import CountingCubes from './CountingCubes';
+import OperatorButtons from './OperatorButtons';
+import CubeDisplay from './CubeDisplay';
 
 // --- Helper Functions ---
 const generateProblem = (maxTotal) => {
@@ -29,10 +31,31 @@ const generateSentences = (p) => [
   { text: `${p.whole} - ? = ${p.part2}`, answer: p.part1 },
 ];
 
+const generateComparisonProblem = (max) => {
+  const num1 = Math.floor(Math.random() * (max + 1));
+  let num2;
+  // Give a 20% chance for the numbers to be equal
+  if (Math.random() < 0.2) {
+    num2 = num1;
+  } else {
+    num2 = Math.floor(Math.random() * (max + 1));
+  }
+
+  let answer;
+  if (num1 > num2) answer = '>';
+  else if (num1 < num2) answer = '<';
+  else answer = '=';
+
+  return { num1, num2, answer };
+};
+
 const CORRECT_MESSAGES = ["Awesome!", "You got it!", "Super!", "Brilliant!", "Fantastic!"];
 
 // --- Main Component ---
 const MathGame = () => {
+  const [gameMode, setGameMode] = useState('numberBond'); // 'numberBond' or 'comparison'
+  const [comparisonProblem, setComparisonProblem] = useState(() => generateComparisonProblem(10));
+  const [filledOperator, setFilledOperator] = useState(null);
   const [maxTotal, setMaxTotal] = useState(10);
   const [problem, setProblem] = useState(() => generateProblem(maxTotal));
   const [sentences, setSentences] = useState(() => generateSentences(problem));
@@ -45,7 +68,6 @@ const MathGame = () => {
   const [currentSentenceIdx, setCurrentSentenceIdx] = useState(0);
   const [filledAnswer, setFilledAnswer] = useState(null);
   const [filledSentenceAnswer, setFilledSentenceAnswer] = useState(null);
-
   const goal = 5;
 
   // Re-generate problem when maxTotal changes
@@ -63,6 +85,20 @@ const MathGame = () => {
     setFilledAnswer(null);
     setFilledSentenceAnswer(null); // Ensure this is reset
   }, [maxTotal]);
+
+  const handleComparisonAnswer = (op) => {
+    if (op === comparisonProblem.answer) {
+      setFilledOperator(op);
+      handleCorrectAnswer(); // We can reuse the same correct/incorrect handlers!
+      // After a delay, generate a new problem
+      setTimeout(() => {
+        setComparisonProblem(generateComparisonProblem(maxTotal));
+        setFilledOperator(null);
+      }, 1200);
+    } else {
+      handleIncorrectAnswer();
+    }
+  };
 
   const handleCorrectAnswer = () => {
     // Determine if the goal will be met on this turn
@@ -148,17 +184,23 @@ const MathGame = () => {
 
   return (
     <div className="flex flex-col justify-center items-center min-h-screen bg-blue-50 font-sans p-4">
+      {/* --- Game Mode Switcher --- */}
+      <div className="flex gap-2 p-2 bg-purple-200 rounded-lg mb-4">
+        <button onClick={() => setGameMode('numberBond')} className={`px-4 py-2 rounded-md font-semibold ${gameMode === 'numberBond' ? 'bg-purple-600 text-white' : 'bg-white text-purple-600'}`}>Number Bonds</button>
+        <button onClick={() => setGameMode('comparison')} className={`px-4 py-2 rounded-md font-semibold ${gameMode === 'comparison' ? 'bg-purple-600 text-white' : 'bg-white text-purple-600'}`}>Comparison (&lt; &gt; =)</button>
+      </div>
+      
       {showConfetti && <Confetti recycle={false} numberOfPieces={300} />}
 
-       {/* --- Main Game Card --- */}
-       {/* ADD THE STAR TRACKER HERE, ABOVE THE PROGRESS BAR */}
+       {/* --- Star Tracker and Progress Bar --- */}
         <div className="w-full max-w-sm">
           <ProgressBar progress={progress} goal={goal} />
           <StarTracker count={stars} level={starLevel} />
         </div>
-      {/* Make this parent div 'relative' for absolute positioning of confetti */}
+
+      {/* --- Main Game Card --- */}
       <motion.div 
-        key={problem.whole + problem.part1} 
+        key={gameMode} // Animate when game mode changes
         initial={{ opacity: 0, y: -50, rotate: -5 }}
         animate={{ opacity: 1, y: 0, rotate: 0 }}
         className="relative w-full max-w-sm p-6 bg-white rounded-3xl shadow-2xl border-4 border-purple-300 overflow-hidden" // Added overflow-hidden to contain confetti
@@ -183,7 +225,12 @@ const MathGame = () => {
           />
         )}
 
-        {/* --- The Question Area --- */}
+        {/* --- CONDITIONAL UI RENDERING BASED ON GAME MODE --- */}
+
+        {gameMode === 'numberBond' ? (
+          // --- NUMBER BOND GAME UI ---
+          <>
+          {/* --- The Question Area --- */}
         <div className="text-center min-h-[180px]">
           <div className="mb-4">
             <CountingCubes 
@@ -233,6 +280,36 @@ const MathGame = () => {
           onNumberClick={handleAnswer} 
           disabled={feedback.type === 'correct'}
         />
+          </>
+          ) : (
+          // --- NEW: COMPARISON GAME UI ---
+          <div>
+            <div className="flex justify-around items-center text-center">
+              {/* Left Side */}
+              <div className="w-1/3">
+                <CubeDisplay count={comparisonProblem.num1} color="bg-sky-400" />
+                <div className="text-6xl font-bold text-gray-700">{comparisonProblem.num1}</div>
+              </div>
+              
+              {/* Middle Operator */}
+              <div className="w-1/3 flex justify-center items-center h-24">
+                {filledOperator ? (
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-6xl font-bold text-purple-600">{filledOperator}</motion.div>
+                ) : (
+                  <div className="w-20 h-20 border-4 border-dashed border-gray-300 rounded-full"></div>
+                )}
+              </div>
+
+              {/* Right Side */}
+              <div className="w-1/3">
+                <CubeDisplay count={comparisonProblem.num2} color="bg-amber-400" />
+                <div className="text-6xl font-bold text-gray-700">{comparisonProblem.num2}</div>
+              </div>
+            </div>
+            <OperatorButtons onSelect={handleComparisonAnswer} disabled={filledOperator !== null} />
+          </div>
+        )}
+
       </motion.div>
 
       {/* --- Settings --- */}
