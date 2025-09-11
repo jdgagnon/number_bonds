@@ -40,6 +40,7 @@ const MathGame = () => {
   const [feedback, setFeedback] = useState({ type: "", message: "" }); // 'correct' or 'incorrect'
   const [progress, setProgress] = useState(0);
   const [stars, setStars] = useState(0);
+  const [starLevel, setStarLevel] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
   const [currentSentenceIdx, setCurrentSentenceIdx] = useState(0);
   const [filledAnswer, setFilledAnswer] = useState(null);
@@ -56,33 +57,42 @@ const MathGame = () => {
     const newProblem = generateProblem(maxTotal);
     setProblem(newProblem);
     setSentences(generateSentences(newProblem));
-    setFilledAnswer(null);
     setStage("bond");
     setFeedback({ type: "", message: "" });
     setCurrentSentenceIdx(0);
-    setFilledSentenceAnswer(null); 
+    setFilledAnswer(null);
+    setFilledSentenceAnswer(null); // Ensure this is reset
   }, [maxTotal]);
 
-  const handleCorrectAnswer = (correctAnswer) => {
-    // Determine the transition delay BEFORE updating progress.
-    // This checks if the goal WILL be met on this turn.
+  const handleCorrectAnswer = () => {
+    // Determine if the goal will be met on this turn
     const isGoalMet = (progress + 1) >= goal;
     const transitionDelay = isGoalMet ? 4000 : 1200;
 
-    // Set immediate feedback for the user
-    const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
-    setFeedback({ type: "correct", message: `✅ ${randomMessage}` });
+    setFeedback({ type: "correct", message: `✅ Great job!` });
+
+    // Handle awarding stars and confetti if the goal is met
+    // This logic is now separate and will only run once
+    if (isGoalMet) {
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 4000);
+      
+      setStars(prevStars => {
+        if (prevStars === 5) {
+          setStarLevel(prevLevel => prevLevel + 1);
+          return 1; // Reset to 1 star for the new level
+        }
+        return prevStars + 1; // Otherwise, just add a new star
+      });
+    }
 
     // Use a functional update for progress to prevent stale state
     setProgress(prevProgress => {
       const newProgress = prevProgress + 1;
       if (newProgress >= goal) {
-        setStars(prevStars => Math.min(prevStars + 1, 5));
-        setShowConfetti(true);
-        setTimeout(() => setShowConfetti(false), 4000);
-        return 0; // Return 0 to reset the progress bar
+        return 0; // Just reset the progress bar
       }
-      return newProgress; // Otherwise, return the incremented progress
+      return newProgress; // Otherwise, just increment progress
     });
     
     // Schedule the next game step using the calculated delay
@@ -92,9 +102,8 @@ const MathGame = () => {
       if (stage === 'bond') {
         setStage('sentence');
       } else if (currentSentenceIdx < sentences.length - 1) {
-        // Use a functional update here as well for safety
-        setCurrentSentenceIdx(prevIdx => prevIdx + 1);
         setFilledSentenceAnswer(null); 
+        setCurrentSentenceIdx(prevIdx => prevIdx + 1);
       } else {
         moveToNextProblem();
       }
@@ -120,13 +129,14 @@ const MathGame = () => {
     }
 
     if (value === correctAnswer) {
-      // ADD THIS LOGIC HERE
+      // Set the appropriate answer for animation here
       if (stage === 'bond') {
         setFilledAnswer(correctAnswer);
       } else {
         setFilledSentenceAnswer(correctAnswer);
       }
-      handleCorrectAnswer(correctAnswer);
+      // Then, handle the rest of the logic
+      handleCorrectAnswer();
     } else {
       handleIncorrectAnswer();
     }
@@ -144,7 +154,7 @@ const MathGame = () => {
        {/* ADD THE STAR TRACKER HERE, ABOVE THE PROGRESS BAR */}
         <div className="w-full max-w-sm">
           <ProgressBar progress={progress} goal={goal} />
-          <StarTracker count={stars} />
+          <StarTracker count={stars} level={starLevel} />
         </div>
       {/* Make this parent div 'relative' for absolute positioning of confetti */}
       <motion.div 
