@@ -2,14 +2,14 @@ import React from "react";
 import { motion } from "framer-motion";
 
 const Circle = ({ cx, cy, value, isBlank, filledAnswer }) => {
-  const yPosition = cy + 7;
+  const yPosition = cy + 11;
 
   return (
     <g>
       <circle
         cx={cx}
         cy={cy}
-        r="30"
+        r="38"
         strokeWidth="3"
         className={`${
           isBlank ? "fill-purple-200" : "fill-gray-100"
@@ -19,7 +19,7 @@ const Circle = ({ cx, cy, value, isBlank, filledAnswer }) => {
       <text
         x={cx}
         y={yPosition}
-        fontSize="22"
+        fontSize="32"
         textAnchor="middle"
         className="font-bold fill-purple-800 select-none"
         opacity={isBlank && filledAnswer !== null ? 0 : 1}
@@ -32,7 +32,7 @@ const Circle = ({ cx, cy, value, isBlank, filledAnswer }) => {
         <motion.text
           x={cx}
           y={yPosition}
-          fontSize="22"
+          fontSize="32"
           textAnchor="middle"
           className="font-bold fill-purple-800 select-none"
           // --- THIS IS THE FIX ---

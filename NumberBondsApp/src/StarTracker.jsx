@@ -22,8 +22,8 @@ const Star = ({ filled, level }) => {
   return (
     <div className={`relative ${filled ? 'animate-glow' : ''}`}>
       <svg
-        width="40"
-        height="40"
+        width="50"
+        height="50"
         viewBox="0 0 24 24"
         strokeWidth="1"
         strokeLinecap="round"

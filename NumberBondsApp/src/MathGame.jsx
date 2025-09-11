@@ -12,6 +12,15 @@ import MultipleChoice from './MultipleChoice';
 import Feedback from './Feedback';
 
 // --- Helper Functions ---
+const generateBondChoices = (correctAnswer, max) => {
+  const choices = new Set([correctAnswer]);
+  while (choices.size < 8) {
+    const randomChoice = Math.floor(Math.random() * (max + 1));
+    choices.add(randomChoice);
+  }
+  return Array.from(choices).sort(() => Math.random() - 0.5);
+};
+
 const generateProblem = (maxTotal) => {
   if (maxTotal < 2) return { part1: 1, part2: 1, whole: 2, blank: "whole" };
 
@@ -88,6 +97,13 @@ const MathGame = () => {
   const [filledOperator, setFilledOperator] = useState(null);
   const [maxTotal, setMaxTotal] = useState(10);
   const [problem, setProblem] = useState(() => generateProblem(maxTotal));
+  const [numberBondChoices, setNumberBondChoices] = useState(() => {
+    const initialProblem = generateProblem(10);
+    setProblem(initialProblem); // Set initial problem here too
+    const { part1, part2, whole, blank } = initialProblem;
+    const answer = blank === 'whole' ? whole : blank === 'left' ? part1 : part2;
+    return generateBondChoices(answer, 10);
+  });
   const [sentences, setSentences] = useState(() => generateSentences(problem));
   const [stage, setStage] = useState("bond"); // 'bond' or 'sentence'
   const [feedback, setFeedback] = useState({ type: "", message: "" }); // 'correct' or 'incorrect'
@@ -102,11 +118,19 @@ const MathGame = () => {
 
   // Re-generate problem when maxTotal changes
   useEffect(() => {
-    moveToNextProblem();
-    setPatternProblem(generatePatternProblem(maxTotal * 2)); // Generate a new pattern problem
-    setComparisonProblem(generateComparisonProblem(maxTotal));
-    setFilledPatternAnswer(null);
-  }, [maxTotal]);
+    if (gameMode !== 'numberBond') return; // Only run for the number bond game
+
+    let correctAnswer;
+    if (stage === 'bond') {
+      const { part1, part2, whole, blank } = problem;
+      correctAnswer = blank === 'whole' ? whole : blank === 'left' ? part1 : part2;
+    } else { // stage is 'sentence'
+      correctAnswer = sentences[currentSentenceIdx].answer;
+    }
+    
+    // Generate and set a fresh set of choices
+    setNumberBondChoices(generateBondChoices(correctAnswer, maxTotal));
+  }, [problem, stage, currentSentenceIdx, gameMode, sentences, maxTotal]);
 
   const moveToNextProblem = useCallback(() => {
     const newProblem = generateProblem(maxTotal);
@@ -116,7 +140,8 @@ const MathGame = () => {
     setFeedback({ type: "", message: "" });
     setCurrentSentenceIdx(0);
     setFilledAnswer(null);
-    setFilledSentenceAnswer(null); // Ensure this is reset
+    setFilledSentenceAnswer(null);
+    // REMOVED choice generation logic from here
   }, [maxTotal]);
 
   const handlePatternAnswer = (choice) => {
@@ -277,42 +302,43 @@ const MathGame = () => {
         {gameMode === 'numberBond' ? (
           // --- NUMBER BOND GAME UI ---
           <>
-          {/* --- The Question Area --- */}
-        <div className="text-center min-h-[180px]">
-          <div className="mb-4">
-            <CountingCubes 
-              key={problemKey} 
-              part1={problem.part1} 
-              part2={problem.part2} />
-          </div>
-          {stage === 'bond' ? (
-            <NumberBond problem={problem} filledAnswer={filledAnswer} />
-          ) : (
-            <div className="flex justify-center items-center h-full text-4xl font-bold text-gray-700 tracking-wider min-h-[160px]">
-              <span>{partBefore}</span>
-              {filledSentenceAnswer !== null ? (
-                <motion.span
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-                  className="inline-block px-2 text-purple-600"
-                >
-                  {filledSentenceAnswer}
-                </motion.span>
+            {/* --- The Question Area --- */}
+            <div className="text-center min-h-[180px]">
+              <div className="mb-4">
+                <CountingCubes 
+                  key={problemKey} 
+                  part1={problem.part1} 
+                  part2={problem.part2} />
+              </div>
+              {stage === 'bond' ? (
+                <NumberBond problem={problem} filledAnswer={filledAnswer} />
               ) : (
-                <span className="px-2">?</span>
+                <div className="flex justify-center items-center h-full text-4xl font-bold text-gray-700 tracking-wider min-h-[160px]">
+                  <span>{partBefore}</span>
+                  {filledSentenceAnswer !== null ? (
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+                      className="inline-block px-2 text-purple-600"
+                    >
+                      {filledSentenceAnswer}
+                    </motion.span>
+                  ) : (
+                    <span className="px-2">?</span>
+                  )}
+                  <span>{partAfter}</span>
+                </div>
               )}
-              <span>{partAfter}</span>
             </div>
-          )}
-        </div>
-        
-        {/* Number Pad */}
-        <NumberPad 
-          maxNumber={maxTotal} 
-          onNumberClick={handleAnswer} 
-          disabled={feedback.type === 'correct'}
-        />
+
+            {/* Use MultipleChoice instead of NumberPad */}
+            <MultipleChoice
+              choices={numberBondChoices}
+              onSelect={handleAnswer}
+              disabled={feedback.type === 'correct'}
+              color="purple"
+            />
           </>
           ) : gameMode === 'comparison' ? (
           // --- NEW: COMPARISON GAME UI ---
@@ -321,13 +347,13 @@ const MathGame = () => {
               {/* Left Side */}
               <div className="w-1/3">
                 <CubeDisplay count={comparisonProblem.num1} color="bg-sky-400" />
-                <div className="text-5xl font-bold text-gray-700">{comparisonProblem.num1}</div>
+                <div className="text-6xl font-bold text-gray-700">{comparisonProblem.num1}</div>
               </div>
               
               {/* Middle Operator */}
               <div className="w-1/3 flex justify-center items-center h-24">
                 {filledOperator ? (
-                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-5xl font-bold text-purple-600">{filledOperator}</motion.div>
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-6xl font-bold text-purple-600">{filledOperator}</motion.div>
                 ) : (
                   <div className="w-20 h-20 border-4 border-dashed border-gray-300 rounded-full"></div>
                 )}
@@ -371,7 +397,6 @@ const MathGame = () => {
             />
           </div>
         )}
-
         <Feedback feedback={feedback} />
 
       </motion.div>

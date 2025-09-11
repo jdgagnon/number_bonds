@@ -5,7 +5,7 @@ const ProgressBar = ({ progress, goal }) => {
 
   return (
     <div className="w-full max-w-sm mb-4">
-      <h3 className="text-center text-xl font-bold text-yellow-500 mb-2">⭐ Star Power ⭐</h3>
+      <h3 className="text-center text-3xl font-bold text-yellow-500 mb-2">⭐ Star Power ⭐</h3>
       <div className="h-6 w-full bg-gray-200 rounded-full overflow-hidden border-2 border-gray-300">
         <div
           style={{ width: `${percentage}%` }}
