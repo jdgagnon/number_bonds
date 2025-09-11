@@ -1,16 +1,17 @@
 <br/>
 <h1 align="center">
-  <img src="NumberBondsApp/public/NumberBondLogo.png" alt="Logo" width="120" height="auto" style="vertical-align: middle; margin-right: 15px;">
+  <img src="NumberBondsApp/public/NumberBondLogo.png" alt="Logo" width="60" height="60" style="vertical-align: middle; margin-right: 15px;">
   Number Bond Challenge
 </h1>
 
 <p align="center">
-  A fun and interactive math game designed to help children master number bonds, addition, and subtraction through engaging visuals and a rewarding progression system.
+  A fun and interactive suite of math games designed to help children master number bonds, comparison, and patterns through engaging visuals and a rewarding progression system.
   <br/>
   <br/>
   <a href="https://numberbond.netlify.app">
     <img src="https://img.shields.io/badge/View_Demo-A855F7?style=for-the-badge&logo=netlify&logoColor=white" alt="View Demo"/>
   </a>
+  <img src="https://img.shields.io/badge/Game_Modes-3-4ade80?style=for-the-badge" alt="Game Modes"/>
   <br/>
   <img src="https://img.shields.io/badge/React-18.2.0-38BDF8?style=for-the-badge&logo=react&logoColor=white" alt="React Badge"/>
   <img src="https://img.shields.io/badge/Vite-7.1.5-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite Badge"/>
@@ -18,13 +19,12 @@
 </p>
 
 <br/>
-<p align="center">
-  <img src="NumberBondsApp/public/NumberBondsAppScreenshot.jpeg" alt="Shot" width="240" height="auto">
-</p>
+
+![Number Bond Challenge Gameplay Screenshot](NumberBondsApp/public/NumberBondsAppScreenshot.jpeg)
 
 ## About The Project
 
-The **Number Bond Challenge** is an educational web application built with React to help young learners practice their foundational math skills. The game provides a multi-sensory learning experience, combining visual number bonds, interactive counting cubes, and positive reinforcement through animations and a star-based reward system. The difficulty is adjustable, making it suitable for children at various learning stages.
+The **Number Bond Challenge** is a collection of educational math games built with React to help young learners practice their foundational math skills. The app now includes three distinct modes—Number Bonds, Comparison, and Patterns—to provide a varied and engaging learning experience. It combines clear visual representations with interactive elements and a multi-level reward system to keep children motivated.
 
 ---
 ## 🚀 Live Demo
@@ -36,15 +36,20 @@ This application is deployed on Netlify and can be viewed at:
 ---
 ## Key Features
 
-* **Interactive Number Bonds:** A clear, visual representation of the "part-part-whole" math concept.
-* **Counting Cubes:** Clickable, color-coded cubes to help children visualize the problem and count the numbers.
-* **Multiple Problem Types:** Automatically generates related addition and subtraction sentences to reinforce learning.
-* **Rewarding Progression:**
-    * A "Star Power" progress bar fills with each correct answer.
-    * Filling the bar awards a glowing, sparkling star.
-    * After earning 5 stars, the player "levels up" to a new set of colored stars.
-* **Engaging Feedback:** Fun animations, like popping answers and confetti bursts, celebrate correct answers and goal completion.
-* **Adjustable Difficulty:** The maximum total for problems can be easily changed to match the child's skill level.
+The application includes three distinct game modes to target different math skills:
+
+* **🔢 Number Bonds:** A clear, visual representation of the "part-part-whole" math concept, complete with related addition and subtraction sentences.
+
+* **⚖️ Comparison (< > =):** Students compare two numbers, each shown with a corresponding set of countable cubes, and select whether the first is greater than, less than, or equal to the second.
+
+* **➡️ Patterns:** A skip-counting game where students must identify the next number in a sequence (counting by 1s, 2s, 5s, or 10s) from multiple-choice options.
+
+### Core Mechanics
+* **Visual Counting Aids:** Interactive, clickable cubes help children visualize the numbers in each problem.
+* **Rewarding Progression:** A "Star Power" progress bar fills with each correct answer, awarding a glowing, sparkling star upon completion.
+* **Leveling System:** After earning 5 stars, the player "levels up" to a new set of colored stars, providing long-term goals.
+* **Engaging Feedback:** Fun animations, like popping answers and confetti bursts, celebrate success.
+* **Adjustable Difficulty:** The maximum number used in problems can be easily changed to match the child's skill level.
 
 ---
 ## Built With

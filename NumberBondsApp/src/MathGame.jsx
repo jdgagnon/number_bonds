@@ -103,6 +103,7 @@ const MathGame = () => {
   useEffect(() => {
     moveToNextProblem();
     setPatternProblem(generatePatternProblem(maxTotal * 2)); // Generate a new pattern problem
+    setComparisonProblem(generateComparisonProblem(maxTotal));
     setFilledPatternAnswer(null);
   }, [maxTotal]);
 
@@ -127,6 +128,21 @@ const MathGame = () => {
       }, 1200);
     } else {
       handleIncorrectAnswer();
+    }
+  };
+
+  const handleComparisonAnswer = (op) => {
+    if (op === comparisonProblem.answer) {
+      setFilledOperator(op);
+      handleCorrectAnswer(); // Reuse the generic handler for correct answers
+      
+      // After a delay, generate a new problem
+      setTimeout(() => {
+        setComparisonProblem(generateComparisonProblem(maxTotal));
+        setFilledOperator(null);
+      }, 1200);
+    } else {
+      handleIncorrectAnswer(); // Reuse the generic handler for incorrect answers
     }
   };
 
