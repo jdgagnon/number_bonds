@@ -321,13 +321,13 @@ const MathGame = () => {
               {/* Left Side */}
               <div className="w-1/3">
                 <CubeDisplay count={comparisonProblem.num1} color="bg-sky-400" />
-                <div className="text-6xl font-bold text-gray-700">{comparisonProblem.num1}</div>
+                <div className="text-5xl font-bold text-gray-700">{comparisonProblem.num1}</div>
               </div>
               
               {/* Middle Operator */}
               <div className="w-1/3 flex justify-center items-center h-24">
                 {filledOperator ? (
-                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-6xl font-bold text-purple-600">{filledOperator}</motion.div>
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-5xl font-bold text-purple-600">{filledOperator}</motion.div>
                 ) : (
                   <div className="w-20 h-20 border-4 border-dashed border-gray-300 rounded-full"></div>
                 )}
@@ -345,7 +345,7 @@ const MathGame = () => {
           // --- NEW: PATTERN GAME UI ---
           <div className="text-center min-h-[300px]">
             <h3 className="text-2xl font-bold text-gray-600 mb-4">What number comes next?</h3>
-            <div className="flex justify-center items-center text-5xl font-bold text-gray-700 p-4 bg-gray-100 rounded-lg">
+            <div className="flex justify-center items-center text-4xl font-bold text-gray-700 p-4 bg-gray-100 rounded-lg">
               {patternProblem.sequence.map((num) => (
                 <React.Fragment key={num}>
                   <span>{num}</span>
