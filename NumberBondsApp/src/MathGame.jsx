@@ -8,6 +8,7 @@ import StarTracker from './StarTracker';
 import CountingCubes from './CountingCubes';
 import OperatorButtons from './OperatorButtons';
 import CubeDisplay from './CubeDisplay';
+import MultipleChoice from './MultipleChoice';
 
 // --- Helper Functions ---
 const generateProblem = (maxTotal) => {
@@ -49,11 +50,39 @@ const generateComparisonProblem = (max) => {
   return { num1, num2, answer };
 };
 
+const generatePatternProblem = (max) => {
+  const skipOptions = [1, 2, 5, 10];
+  const skipCount = skipOptions[Math.floor(Math.random() * skipOptions.length)];
+  const sequenceLength = 3;
+  
+  // Ensure the pattern doesn't go too high
+  const startNumber = Math.floor(Math.random() * (max / 2));
+  
+  const sequence = Array.from({ length: sequenceLength }, (_, i) => startNumber + (i * skipCount));
+  const answer = startNumber + (sequenceLength * skipCount);
+
+  // Create distractor choices
+  const choices = new Set([answer]);
+  while (choices.size < 4) {
+    const wrongAnswer = answer + (Math.floor(Math.random() * 5) - 2) * skipCount;
+    if (wrongAnswer > 0 && wrongAnswer !== answer) {
+      choices.add(wrongAnswer);
+    }
+  }
+  
+  // Shuffle the choices
+  const shuffledChoices = Array.from(choices).sort(() => Math.random() - 0.5);
+
+  return { sequence, choices: shuffledChoices, answer };
+};
+
 const CORRECT_MESSAGES = ["Awesome!", "You got it!", "Super!", "Brilliant!", "Fantastic!"];
 
 // --- Main Component ---
 const MathGame = () => {
-  const [gameMode, setGameMode] = useState('numberBond'); // 'numberBond' or 'comparison'
+  const [gameMode, setGameMode] = useState('numberBond'); // 'numberBond', 'comparison', or 'pattern'
+  const [patternProblem, setPatternProblem] = useState(() => generatePatternProblem(20));
+  const [filledPatternAnswer, setFilledPatternAnswer] = useState(null);
   const [comparisonProblem, setComparisonProblem] = useState(() => generateComparisonProblem(10));
   const [filledOperator, setFilledOperator] = useState(null);
   const [maxTotal, setMaxTotal] = useState(10);
@@ -73,6 +102,8 @@ const MathGame = () => {
   // Re-generate problem when maxTotal changes
   useEffect(() => {
     moveToNextProblem();
+    setPatternProblem(generatePatternProblem(maxTotal * 2)); // Generate a new pattern problem
+    setFilledPatternAnswer(null);
   }, [maxTotal]);
 
   const moveToNextProblem = useCallback(() => {
@@ -86,14 +117,13 @@ const MathGame = () => {
     setFilledSentenceAnswer(null); // Ensure this is reset
   }, [maxTotal]);
 
-  const handleComparisonAnswer = (op) => {
-    if (op === comparisonProblem.answer) {
-      setFilledOperator(op);
-      handleCorrectAnswer(); // We can reuse the same correct/incorrect handlers!
-      // After a delay, generate a new problem
+  const handlePatternAnswer = (choice) => {
+    if (choice === patternProblem.answer) {
+      setFilledPatternAnswer(choice);
+      handleCorrectAnswer();
       setTimeout(() => {
-        setComparisonProblem(generateComparisonProblem(maxTotal));
-        setFilledOperator(null);
+        setPatternProblem(generatePatternProblem(maxTotal * 2));
+        setFilledPatternAnswer(null);
       }, 1200);
     } else {
       handleIncorrectAnswer();
@@ -187,7 +217,8 @@ const MathGame = () => {
       {/* --- Game Mode Switcher --- */}
       <div className="flex gap-2 p-2 bg-purple-200 rounded-lg mb-4">
         <button onClick={() => setGameMode('numberBond')} className={`px-4 py-2 rounded-md font-semibold ${gameMode === 'numberBond' ? 'bg-purple-600 text-white' : 'bg-white text-purple-600'}`}>Number Bonds</button>
-        <button onClick={() => setGameMode('comparison')} className={`px-4 py-2 rounded-md font-semibold ${gameMode === 'comparison' ? 'bg-purple-600 text-white' : 'bg-white text-purple-600'}`}>Comparison (&lt; &gt; =)</button>
+        <button onClick={() => setGameMode('comparison')} className={`px-4 py-2 rounded-md font-semibold ${gameMode === 'comparison' ? 'bg-purple-600 text-white' : 'bg-white text-purple-600'}`}>Comparison</button>
+        <button onClick={() => setGameMode('pattern')} className={`px-4 py-2 rounded-md font-semibold ${gameMode === 'pattern' ? 'bg-purple-600 text-white' : 'bg-white text-purple-600'}`}>Patterns</button>
       </div>
       
       {showConfetti && <Confetti recycle={false} numberOfPieces={300} />}
@@ -281,7 +312,7 @@ const MathGame = () => {
           disabled={feedback.type === 'correct'}
         />
           </>
-          ) : (
+          ) : gameMode === 'comparison' ? (
           // --- NEW: COMPARISON GAME UI ---
           <div>
             <div className="flex justify-around items-center text-center">
@@ -307,6 +338,35 @@ const MathGame = () => {
               </div>
             </div>
             <OperatorButtons onSelect={handleComparisonAnswer} disabled={filledOperator !== null} />
+          </div>
+        ): (
+          // --- NEW: PATTERN GAME UI ---
+          <div className="text-center min-h-[300px]">
+            <h3 className="text-2xl font-bold text-gray-600 mb-4">What number comes next?</h3>
+            <div className="flex justify-center items-center text-5xl font-bold text-gray-700 p-4 bg-gray-100 rounded-lg">
+              {patternProblem.sequence.map((num) => (
+                <React.Fragment key={num}>
+                  <span>{num}</span>
+                  <span className="mx-3 text-3xl text-gray-400">→</span>
+                </React.Fragment>
+              ))}
+              {filledPatternAnswer !== null ? (
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="text-purple-600"
+                >
+                  {filledPatternAnswer}
+                </motion.span>
+              ) : (
+                <span className="text-purple-500">?</span>
+              )}
+            </div>
+            <MultipleChoice
+              choices={patternProblem.choices}
+              onSelect={handlePatternAnswer}
+              disabled={filledPatternAnswer !== null}
+            />
           </div>
         )}
 
