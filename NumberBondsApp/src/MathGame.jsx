@@ -40,6 +40,7 @@ const MathGame = () => {
   const [progress, setProgress] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
   const [currentSentenceIdx, setCurrentSentenceIdx] = useState(0);
+  const [filledAnswer, setFilledAnswer] = useState(null);
 
   const goal = 5;
 
@@ -52,6 +53,7 @@ const MathGame = () => {
     const newProblem = generateProblem(maxTotal);
     setProblem(newProblem);
     setSentences(generateSentences(newProblem));
+    setFilledAnswer(null);
     setStage("bond");
     setFeedback({ type: "", message: "" });
     setCurrentSentenceIdx(0);
@@ -60,6 +62,17 @@ const MathGame = () => {
   const handleCorrectAnswer = () => {
     const newProgress = progress + 1;
     const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
+    if (stage === 'bond') {
+      // Find the correct answer value
+      const correctAnswerValue =
+        problem.blank === 'whole'
+          ? problem.whole
+          : problem.blank === 'left'
+          ? problem.part1
+          : problem.part2;
+      // Set the state so we can animate it
+      setFilledAnswer(correctAnswerValue);
+    }
     setFeedback({ type: "correct", message: `✅ ${randomMessage}` });
 
     if (newProgress >= goal) {
@@ -73,6 +86,15 @@ const MathGame = () => {
     // Transition to the next stage/problem after a short delay
     setTimeout(() => {
       if (stage === "bond") {
+        // Find the correct answer value
+        const correctAnswerValue =
+          problem.blank === 'whole'
+            ? problem.whole
+            : problem.blank === 'left'
+            ? problem.part1
+            : problem.part2;
+        // Set the state so we can animate it
+        setFilledAnswer(correctAnswerValue);
         setStage("sentence");
         setFeedback({ type: "", message: "" });
       } else if (currentSentenceIdx < sentences.length - 1) {
@@ -156,7 +178,7 @@ const MathGame = () => {
               part2={problem.part2} />
           </div>
           {stage === 'bond' ? (
-            <NumberBond problem={problem} />
+            <NumberBond problem={problem} filledAnswer={filledAnswer} />
           ) : (
             <div className="flex justify-center items-center h-full text-4xl font-bold text-gray-700 tracking-wider">
               {sentences[currentSentenceIdx].text}
