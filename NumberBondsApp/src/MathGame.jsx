@@ -113,20 +113,6 @@ const MathGame = () => {
   return (
     <div className="flex flex-col justify-center items-center min-h-screen bg-blue-50 font-sans p-4">
       {showConfetti && <Confetti recycle={false} numberOfPieces={300} />}
-      
-      {/* --- Settings --- */}
-      <div className="absolute top-4 right-4 bg-white p-3 rounded-lg shadow-md">
-        <label htmlFor="maxTotal" className="font-bold text-gray-600">Max Total: </label>
-        <input
-          type="number"
-          id="maxTotal"
-          value={maxTotal}
-          min={2}
-          max={99}
-          onChange={(e) => setMaxTotal(Number(e.target.value))}
-          className="w-16 p-1 border-2 border-gray-200 rounded-md text-center"
-        />
-      </div>
 
       <ProgressBar progress={progress} goal={goal} />
 
@@ -199,6 +185,20 @@ const MathGame = () => {
           disabled={feedback.type === 'correct'}
         />
       </motion.div>
+
+      {/* --- Settings --- */}
+      <div className="mt-6 bg-white p-3 rounded-lg shadow-md">
+        <label htmlFor="maxTotal" className="font-bold text-gray-600">Max Total: </label>
+        <input
+          type="number"
+          id="maxTotal"
+          value={maxTotal}
+          min={2}
+          max={99}
+          onChange={(e) => setMaxTotal(Number(e.target.value))}
+          className="w-16 p-1 border-2 border-gray-200 rounded-md text-center"
+        />
+      </div>
     </div>
   );
 };
