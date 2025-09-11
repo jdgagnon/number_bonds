@@ -9,6 +9,7 @@ import CountingCubes from './CountingCubes';
 import OperatorButtons from './OperatorButtons';
 import CubeDisplay from './CubeDisplay';
 import MultipleChoice from './MultipleChoice';
+import Feedback from './Feedback';
 
 // --- Helper Functions ---
 const generateProblem = (maxTotal) => {
@@ -120,76 +121,68 @@ const MathGame = () => {
 
   const handlePatternAnswer = (choice) => {
     if (choice === patternProblem.answer) {
+      const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
+      setFeedback({ type: "correct", message: `✅ ${randomMessage}` });
       setFilledPatternAnswer(choice);
-      handleCorrectAnswer();
+      awardPoint();
+      
+      // ADD THESE TWO LINES
+      const isGoalMet = (progress + 1) >= goal;
+      const transitionDelay = isGoalMet ? 4000 : 1200;
+      
       setTimeout(() => {
         setPatternProblem(generatePatternProblem(maxTotal * 2));
         setFilledPatternAnswer(null);
-      }, 1200);
+        setFeedback({ type: "", message: "" });
+      }, transitionDelay); // Use the calculated delay
+    } else {
+      handleIncorrectAnswer();
+    }
+  };
+  
+  const handleComparisonAnswer = (op) => {
+    if (op === comparisonProblem.answer) {
+      const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
+      setFeedback({ type: "correct", message: `✅ ${randomMessage}` });
+      setFilledOperator(op);
+      awardPoint();
+      
+      // ADD THESE TWO LINES
+      const isGoalMet = (progress + 1) >= goal;
+      const transitionDelay = isGoalMet ? 4000 : 1200;
+      
+      setTimeout(() => {
+        setComparisonProblem(generateComparisonProblem(maxTotal));
+        setFilledOperator(null);
+        setFeedback({ type: "", message: "" });
+      }, transitionDelay); // Use the calculated delay
     } else {
       handleIncorrectAnswer();
     }
   };
 
-  const handleComparisonAnswer = (op) => {
-    if (op === comparisonProblem.answer) {
-      setFilledOperator(op);
-      handleCorrectAnswer(); // Reuse the generic handler for correct answers
-      
-      // After a delay, generate a new problem
-      setTimeout(() => {
-        setComparisonProblem(generateComparisonProblem(maxTotal));
-        setFilledOperator(null);
-      }, 1200);
-    } else {
-      handleIncorrectAnswer(); // Reuse the generic handler for incorrect answers
-    }
-  };
-
-  const handleCorrectAnswer = () => {
-    // Determine if the goal will be met on this turn
+  const awardPoint = () => {
     const isGoalMet = (progress + 1) >= goal;
-    const transitionDelay = isGoalMet ? 4000 : 1200;
 
-    setFeedback({ type: "correct", message: `✅ Great job!` });
-
-    // Handle awarding stars and confetti if the goal is met
-    // This logic is now separate and will only run once
+    // Handle star leveling and confetti
     if (isGoalMet) {
       setShowConfetti(true);
       setTimeout(() => setShowConfetti(false), 4000);
       
-      setStars(prevStars => {
-        if (prevStars === 5) {
-          setStarLevel(prevLevel => prevLevel + 1);
-          return 1; // Reset to 1 star for the new level
-        }
-        return prevStars + 1; // Otherwise, just add a new star
-      });
+      // This corrected logic checks the number of stars at the right time
+      if (stars === 5) {
+        setStarLevel(prevLevel => prevLevel + 1);
+        setStars(1);
+      } else {
+        setStars(prevStars => prevStars + 1);
+      }
     }
 
-    // Use a functional update for progress to prevent stale state
+    // Handle progress bar updates
     setProgress(prevProgress => {
       const newProgress = prevProgress + 1;
-      if (newProgress >= goal) {
-        return 0; // Just reset the progress bar
-      }
-      return newProgress; // Otherwise, just increment progress
+      return newProgress >= goal ? 0 : newProgress;
     });
-    
-    // Schedule the next game step using the calculated delay
-    setTimeout(() => {
-      setFeedback({ type: "", message: "" });
-
-      if (stage === 'bond') {
-        setStage('sentence');
-      } else if (currentSentenceIdx < sentences.length - 1) {
-        setFilledSentenceAnswer(null); 
-        setCurrentSentenceIdx(prevIdx => prevIdx + 1);
-      } else {
-        moveToNextProblem();
-      }
-    }, transitionDelay);
   };
 
   const handleIncorrectAnswer = () => {
@@ -200,25 +193,33 @@ const MathGame = () => {
   const handleAnswer = (value) => {
     let correctAnswer;
     if (stage === "bond") {
-      correctAnswer =
-        problem.blank === "whole"
-          ? problem.whole
-          : problem.blank === "left"
-          ? problem.part1
-          : problem.part2;
+      correctAnswer = problem.blank === "whole" ? problem.whole : problem.blank === "left" ? problem.part1 : problem.part2;
     } else {
       correctAnswer = sentences[currentSentenceIdx].answer;
     }
 
     if (value === correctAnswer) {
-      // Set the appropriate answer for animation here
-      if (stage === 'bond') {
-        setFilledAnswer(correctAnswer);
-      } else {
-        setFilledSentenceAnswer(correctAnswer);
-      }
-      // Then, handle the rest of the logic
-      handleCorrectAnswer();
+      const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
+      setFeedback({ type: "correct", message: `✅ ${randomMessage}` });
+
+      if (stage === 'bond') setFilledAnswer(correctAnswer);
+      else setFilledSentenceAnswer(correctAnswer);
+      
+      awardPoint(); // Call the generic scoring function
+
+      const isGoalMet = (progress + 1) >= goal;
+      const transitionDelay = isGoalMet ? 4000 : 1200;
+      setTimeout(() => {
+        setFeedback({ type: "", message: "" });
+        if (stage === 'bond') {
+          setStage('sentence');
+        } else if (currentSentenceIdx < sentences.length - 1) {
+          setFilledSentenceAnswer(null);
+          setCurrentSentenceIdx(prevIdx => prevIdx + 1);
+        } else {
+          moveToNextProblem();
+        }
+      }, transitionDelay);
     } else {
       handleIncorrectAnswer();
     }
@@ -237,7 +238,6 @@ const MathGame = () => {
         <button onClick={() => setGameMode('pattern')} className={`px-4 py-2 rounded-md font-semibold ${gameMode === 'pattern' ? 'bg-purple-600 text-white' : 'bg-white text-purple-600'}`}>Patterns</button>
       </div>
       
-      {showConfetti && <Confetti recycle={false} numberOfPieces={300} />}
 
        {/* --- Star Tracker and Progress Bar --- */}
         <div className="w-full max-w-sm">
@@ -307,20 +307,6 @@ const MathGame = () => {
           )}
         </div>
         
-        {/* Feedback Message */}
-        <div className="text-center h-8 my-2 text-2xl font-semibold">
-          {feedback.message && (
-             <motion.p
-                key={feedback.message}
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className={feedback.type === 'incorrect' ? 'text-red-500' : 'text-green-500'}
-             >
-                {feedback.message}
-             </motion.p>
-          )}
-        </div>
-        
         {/* Number Pad */}
         <NumberPad 
           maxNumber={maxTotal} 
@@ -385,6 +371,8 @@ const MathGame = () => {
             />
           </div>
         )}
+
+        <Feedback feedback={feedback} />
 
       </motion.div>
 
