@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 
+
 const Circle = ({ cx, cy, value, isBlank }) => (
   <motion.g
     initial={{ scale: 0 }}
