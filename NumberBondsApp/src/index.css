@@ -8,3 +8,57 @@
 body {
 font-family: 'Inter', sans-serif;
 }
+
+@keyframes glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 3px #fef08a);
+  }
+  50% {
+    filter: drop-shadow(0 0 10px #facc15);
+  }
+}
+
+.animate-glow {
+  animation: glow 2.5s infinite ease-in-out;
+}
+
+@keyframes sparkle {
+  0% {
+    transform: translate(0, 0) scale(0) rotate(0deg);
+    opacity: 0;
+  }
+  20% {
+    transform: translate(var(--sparkle-x), var(--sparkle-y)) scale(1) rotate(45deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--sparkle-x-end), var(--sparkle-y-end)) scale(0.2) rotate(90deg);
+    opacity: 0;
+  }
+}
+
+.sparkle-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%; /* Cover the star area */
+  height: 100%;
+  transform: translate(-50%, -50%);
+  pointer-events: none; /* Make sure sparks don't block clicks */
+}
+
+.sparkle {
+  position: absolute;
+  background-color: #fef08a; /* Yellow spark color */
+  border-radius: 50%;
+  width: 3px;
+  height: 3px;
+  opacity: 0;
+  animation: sparkle 1.5s ease-out infinite; /* Animation duration and loop */
+  /* These custom properties will be set inline for random positions */
+  --sparkle-x: 0px;
+  --sparkle-y: 0px;
+  --sparkle-x-end: 4px;
+  --sparkle-y-end: 4px;
+  animation-delay: var(--sparkle-delay); /* Individual delays for each spark */
+}

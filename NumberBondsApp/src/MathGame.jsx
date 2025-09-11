@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import NumberBond from "./NumberBond";
 import NumberPad from "./NumberPad";
 import ProgressBar from "./ProgressBar";
+import StarTracker from './StarTracker';
 import CountingCubes from './CountingCubes';
 
 // --- Helper Functions ---
@@ -38,6 +39,7 @@ const MathGame = () => {
   const [stage, setStage] = useState("bond"); // 'bond' or 'sentence'
   const [feedback, setFeedback] = useState({ type: "", message: "" }); // 'correct' or 'incorrect'
   const [progress, setProgress] = useState(0);
+  const [stars, setStars] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
   const [currentSentenceIdx, setCurrentSentenceIdx] = useState(0);
   const [filledAnswer, setFilledAnswer] = useState(null);
@@ -70,6 +72,7 @@ const MathGame = () => {
       setProgress(0);
       setShowConfetti(true);
       setTimeout(() => setShowConfetti(false), 4000);
+      setStars(prevStars => Math.min(prevStars + 1, 5));
     } else {
       setProgress(newProgress);
     }
@@ -133,9 +136,12 @@ const MathGame = () => {
     <div className="flex flex-col justify-center items-center min-h-screen bg-blue-50 font-sans p-4">
       {showConfetti && <Confetti recycle={false} numberOfPieces={300} />}
 
-      <ProgressBar progress={progress} goal={goal} />
-
        {/* --- Main Game Card --- */}
+       {/* ADD THE STAR TRACKER HERE, ABOVE THE PROGRESS BAR */}
+        <div className="w-full max-w-sm">
+          <ProgressBar progress={progress} goal={goal} />
+          <StarTracker count={stars} />
+        </div>
       {/* Make this parent div 'relative' for absolute positioning of confetti */}
       <motion.div 
         key={problem.whole + problem.part1} 
