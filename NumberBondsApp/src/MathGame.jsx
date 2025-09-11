@@ -62,40 +62,37 @@ const MathGame = () => {
   const handleCorrectAnswer = () => {
     const newProgress = progress + 1;
     const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
-    if (stage === 'bond') {
-      // Find the correct answer value
-      const correctAnswerValue =
-        problem.blank === 'whole'
-          ? problem.whole
-          : problem.blank === 'left'
-          ? problem.part1
-          : problem.part2;
-      // Set the state so we can animate it
-      setFilledAnswer(correctAnswerValue);
-    }
     setFeedback({ type: "correct", message: `✅ ${randomMessage}` });
 
-    if (newProgress >= goal) {
+    const isGoalMet = newProgress >= goal;
+
+    if (isGoalMet) {
       setProgress(0);
       setShowConfetti(true);
       setTimeout(() => setShowConfetti(false), 4000);
     } else {
       setProgress(newProgress);
     }
+
+    // When the 'bond' stage is correct, we still set the answer for animation.
+    if (stage === 'bond') {
+      const correctAnswerValue =
+        problem.blank === 'whole'
+          ? problem.whole
+          : problem.blank === 'left'
+          ? problem.part1
+          : problem.part2;
+      setFilledAnswer(correctAnswerValue);
+    }
     
-    // Transition to the next stage/problem after a short delay
+    // Set the transition delay based on whether the goal was met.
+    const transitionDelay = isGoalMet ? 4000 : 1200;
+
+    // Use the new delay for the transition.
     setTimeout(() => {
-      if (stage === "bond") {
-        // Find the correct answer value
-        const correctAnswerValue =
-          problem.blank === 'whole'
-            ? problem.whole
-            : problem.blank === 'left'
-            ? problem.part1
-            : problem.part2;
-        // Set the state so we can animate it
-        setFilledAnswer(correctAnswerValue);
-        setStage("sentence");
+      // The faulty "if (filledAnswer !== null)" check has been removed from here.
+      if (stage === 'bond') {
+        setStage('sentence');
         setFeedback({ type: "", message: "" });
       } else if (currentSentenceIdx < sentences.length - 1) {
         setCurrentSentenceIdx(currentSentenceIdx + 1);
@@ -103,7 +100,7 @@ const MathGame = () => {
       } else {
         moveToNextProblem();
       }
-    }, 1200);
+    }, transitionDelay);
   };
 
   const handleIncorrectAnswer = () => {
