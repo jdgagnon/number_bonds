@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import NumberBond from "./NumberBond";
 import NumberPad from "./NumberPad";
 import ProgressBar from "./ProgressBar";
+import CountingCubes from './CountingCubes';
 
 // --- Helper Functions ---
 const generateProblem = (maxTotal) => {
@@ -107,6 +108,8 @@ const MathGame = () => {
     }
   };
 
+  const problemKey = `${problem.part1}-${problem.part2}-${currentSentenceIdx}`;
+
   return (
     <div className="flex flex-col justify-center items-center min-h-screen bg-blue-50 font-sans p-4">
       {showConfetti && <Confetti recycle={false} numberOfPieces={300} />}
@@ -160,6 +163,12 @@ const MathGame = () => {
 
         {/* --- The Question Area --- */}
         <div className="text-center min-h-[180px]">
+          <div className="mb-4">
+            <CountingCubes 
+              key={problemKey} 
+              part1={problem.part1} 
+              part2={problem.part2} />
+          </div>
           {stage === 'bond' ? (
             <NumberBond problem={problem} />
           ) : (
