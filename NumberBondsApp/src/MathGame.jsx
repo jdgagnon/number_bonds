@@ -23,10 +23,10 @@ const generateProblem = (maxTotal) => {
 };
 
 const generateSentences = (p) => [
-  { text: `___ + ${p.part2} = ${p.whole}`, answer: p.part1 },
-  { text: `${p.part1} + ___ = ${p.whole}`, answer: p.part2 },
-  { text: `${p.whole} - ${p.part1} = ___`, answer: p.part2 },
-  { text: `${p.whole} - ___ = ${p.part2}`, answer: p.part1 },
+  { text: `? + ${p.part2} = ${p.whole}`, answer: p.part1 },
+  { text: `${p.part1} + ? = ${p.whole}`, answer: p.part2 },
+  { text: `${p.whole} - ${p.part1} = ?`, answer: p.part2 },
+  { text: `${p.whole} - ? = ${p.part2}`, answer: p.part1 },
 ];
 
 const CORRECT_MESSAGES = ["Awesome!", "You got it!", "Super!", "Brilliant!", "Fantastic!"];
@@ -43,6 +43,7 @@ const MathGame = () => {
   const [showConfetti, setShowConfetti] = useState(false);
   const [currentSentenceIdx, setCurrentSentenceIdx] = useState(0);
   const [filledAnswer, setFilledAnswer] = useState(null);
+  const [filledSentenceAnswer, setFilledSentenceAnswer] = useState(null);
 
   const goal = 5;
 
@@ -59,47 +60,41 @@ const MathGame = () => {
     setStage("bond");
     setFeedback({ type: "", message: "" });
     setCurrentSentenceIdx(0);
+    setFilledSentenceAnswer(null); 
   }, [maxTotal]);
 
-  const handleCorrectAnswer = () => {
-    const newProgress = progress + 1;
+  const handleCorrectAnswer = (correctAnswer) => {
+    // Determine the transition delay BEFORE updating progress.
+    // This checks if the goal WILL be met on this turn.
+    const isGoalMet = (progress + 1) >= goal;
+    const transitionDelay = isGoalMet ? 4000 : 1200;
+
+    // Set immediate feedback for the user
     const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
     setFeedback({ type: "correct", message: `✅ ${randomMessage}` });
 
-    const isGoalMet = newProgress >= goal;
-
-    if (isGoalMet) {
-      setProgress(0);
-      setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 4000);
-      setStars(prevStars => Math.min(prevStars + 1, 5));
-    } else {
-      setProgress(newProgress);
-    }
-
-    // When the 'bond' stage is correct, we still set the answer for animation.
-    if (stage === 'bond') {
-      const correctAnswerValue =
-        problem.blank === 'whole'
-          ? problem.whole
-          : problem.blank === 'left'
-          ? problem.part1
-          : problem.part2;
-      setFilledAnswer(correctAnswerValue);
-    }
+    // Use a functional update for progress to prevent stale state
+    setProgress(prevProgress => {
+      const newProgress = prevProgress + 1;
+      if (newProgress >= goal) {
+        setStars(prevStars => Math.min(prevStars + 1, 5));
+        setShowConfetti(true);
+        setTimeout(() => setShowConfetti(false), 4000);
+        return 0; // Return 0 to reset the progress bar
+      }
+      return newProgress; // Otherwise, return the incremented progress
+    });
     
-    // Set the transition delay based on whether the goal was met.
-    const transitionDelay = isGoalMet ? 4000 : 1200;
-
-    // Use the new delay for the transition.
+    // Schedule the next game step using the calculated delay
     setTimeout(() => {
-      // The faulty "if (filledAnswer !== null)" check has been removed from here.
+      setFeedback({ type: "", message: "" });
+
       if (stage === 'bond') {
         setStage('sentence');
-        setFeedback({ type: "", message: "" });
       } else if (currentSentenceIdx < sentences.length - 1) {
-        setCurrentSentenceIdx(currentSentenceIdx + 1);
-        setFeedback({ type: "", message: "" });
+        // Use a functional update here as well for safety
+        setCurrentSentenceIdx(prevIdx => prevIdx + 1);
+        setFilledSentenceAnswer(null); 
       } else {
         moveToNextProblem();
       }
@@ -108,6 +103,7 @@ const MathGame = () => {
 
   const handleIncorrectAnswer = () => {
     setFeedback({ type: "incorrect", message: "❌ Oops, try again!" });
+    setProgress(prevProgress => Math.max(0, prevProgress - 1));
   };
 
   const handleAnswer = (value) => {
@@ -124,13 +120,21 @@ const MathGame = () => {
     }
 
     if (value === correctAnswer) {
-      handleCorrectAnswer();
+      // ADD THIS LOGIC HERE
+      if (stage === 'bond') {
+        setFilledAnswer(correctAnswer);
+      } else {
+        setFilledSentenceAnswer(correctAnswer);
+      }
+      handleCorrectAnswer(correctAnswer);
     } else {
       handleIncorrectAnswer();
     }
   };
 
   const problemKey = `${problem.part1}-${problem.part2}-${currentSentenceIdx}`;
+  const activeSentence = sentences[currentSentenceIdx];
+  const [partBefore, partAfter] = activeSentence.text.split('?');
 
   return (
     <div className="flex flex-col justify-center items-center min-h-screen bg-blue-50 font-sans p-4">
@@ -152,9 +156,6 @@ const MathGame = () => {
         {/* Confetti burst - now positioned absolutely within the card */}
         {showConfetti && (
           <Confetti
-            // Remove width and height props; Confetti will adapt to its parent's size
-            // width={width}
-            // height={height}
             recycle={false}
             numberOfPieces={200} // A few less pieces for a contained burst
             gravity={0.1} // Less gravity for a gentle fall within the card
@@ -183,8 +184,21 @@ const MathGame = () => {
           {stage === 'bond' ? (
             <NumberBond problem={problem} filledAnswer={filledAnswer} />
           ) : (
-            <div className="flex justify-center items-center h-full text-4xl font-bold text-gray-700 tracking-wider">
-              {sentences[currentSentenceIdx].text}
+            <div className="flex justify-center items-center h-full text-4xl font-bold text-gray-700 tracking-wider min-h-[160px]">
+              <span>{partBefore}</span>
+              {filledSentenceAnswer !== null ? (
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+                  className="inline-block px-2 text-purple-600"
+                >
+                  {filledSentenceAnswer}
+                </motion.span>
+              ) : (
+                <span className="px-2">?</span>
+              )}
+              <span>{partAfter}</span>
             </div>
           )}
         </div>

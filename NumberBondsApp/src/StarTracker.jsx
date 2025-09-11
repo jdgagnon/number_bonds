@@ -1,7 +1,7 @@
 import React from "react";
 
 // Number of sparkle elements for each star
-const NUM_SPARKLES = 20; 
+const NUM_SPARKLES = 50; 
 
 // This is a single Star component. It's either empty (gray) or filled (yellow and glowing with sparkles).
 const Star = ({ filled }) => (
@@ -33,10 +33,10 @@ const Star = ({ filled }) => (
               left: `calc(50% + ${Math.random() * 8 - 4}px)`, 
               top: `calc(50% + ${Math.random() * 8 - 4}px)`,
               // Random direction and distance for the spark to travel
-              '--sparkle-x': `${Math.random() * 20 - 10}px`,
-              '--sparkle-y': `${Math.random() * 20 - 10}px`,
-              '--sparkle-x-end': `${Math.random() * 30 - 15}px`,
-              '--sparkle-y-end': `${Math.random() * 30 - 15}px`,
+              '--sparkle-x': `${Math.random() * 30 - 15}px`,
+              '--sparkle-y': `${Math.random() * 30 - 15}px`,
+              '--sparkle-x-end': `${Math.random() * 50 - 25}px`,
+              '--sparkle-y-end': `${Math.random() * 50 - 25}px`,
               // Stagger the animation delays for a continuous sparkling effect
               '--sparkle-delay': `${Math.random() * 1.5}s`,
             }}
