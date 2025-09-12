@@ -12,28 +12,29 @@ const STAR_COLORS = [
 const NUM_SPARKLES = 50; 
 
 // This is a single Star component. It's either empty (gray) or filled (yellow and glowing with sparkles).
-const Star = ({ filled, level }) => {
-  // Use the level to pick a color set. The modulo (%) makes the colors loop.
+const Star = ({ filled, level, isSpinning }) => {
   const colors = STAR_COLORS[level % STAR_COLORS.length];
-
   const fillClass = filled ? colors.fill : 'fill-gray-200';
   const strokeClass = filled ? colors.stroke : 'stroke-gray-400';
 
   return (
-    <div className={`relative ${filled ? 'animate-glow' : ''}`}>
-      <svg
-        width="50"
-        height="50"
-        viewBox="0 0 24 24"
-        strokeWidth="1"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
+    <div className="relative">
+      {/* Conditionally add the new 'animate-spin-slow' class */}
+      <div className={`${filled ? 'animate-glow' : ''} ${isSpinning ? 'animate-spin-slow' : ''}`}>
+        <svg
+          width="50"
+          height="50"
+          viewBox="0 0 24 24"
+          strokeWidth="1"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
         <polygon
           className={`${fillClass} ${strokeClass}`}
           points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
         />
       </svg>
+    </div>
 
         {/* Sparkle container for filled stars */}
         {filled && (
@@ -66,11 +67,13 @@ const Star = ({ filled, level }) => {
 // This component tracks and displays all 5 stars.
 const StarTracker = ({ count, level }) => {
   const maxStars = 5;
+  const maxLevel = 5;
+  const isSpinning = level >= maxLevel;
 
   return (
     <div className="flex justify-center gap-2 mb-2">
       {Array.from({ length: maxStars }).map((_, index) => (
-        <Star key={index} filled={index < count} level={level} />
+        <Star key={index} filled={index < count} level={level} isSpinning={isSpinning} />
       ))}
     </div>
   );

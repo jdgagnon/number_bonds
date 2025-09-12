@@ -10,6 +10,7 @@ import OperatorButtons from './OperatorButtons';
 import CubeDisplay from './CubeDisplay';
 import MultipleChoice from './MultipleChoice';
 import Feedback from './Feedback';
+import DancingUnicorn from './DancingUnicorn'; 
 
 // --- Helper Functions ---
 const generateBondChoices = (correctAnswer, max) => {
@@ -108,13 +109,26 @@ const MathGame = () => {
   const [stage, setStage] = useState("bond"); // 'bond' or 'sentence'
   const [feedback, setFeedback] = useState({ type: "", message: "" }); // 'correct' or 'incorrect'
   const [progress, setProgress] = useState(0);
-  const [stars, setStars] = useState(0);
-  const [starLevel, setStarLevel] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
   const [currentSentenceIdx, setCurrentSentenceIdx] = useState(0);
   const [filledAnswer, setFilledAnswer] = useState(null);
   const [filledSentenceAnswer, setFilledSentenceAnswer] = useState(null);
   const goal = 5;
+  const [stars, setStars] = useState(() => {
+    const savedStars = localStorage.getItem('mathGameStars');
+    return savedStars !== null ? JSON.parse(savedStars) : 0;
+  });
+
+  const [starLevel, setStarLevel] = useState(() => {
+    const savedLevel = localStorage.getItem('mathGameStarLevel');
+    return savedLevel !== null ? JSON.parse(savedLevel) : 0;
+  });
+  
+
+  useEffect(() => {
+    localStorage.setItem('mathGameStars', JSON.stringify(stars));
+    localStorage.setItem('mathGameStarLevel', JSON.stringify(starLevel));
+  }, [stars, starLevel]);
 
   // Re-generate problem when maxTotal changes
   useEffect(() => {
@@ -195,13 +209,19 @@ const MathGame = () => {
       setTimeout(() => setShowConfetti(false), 4000);
       
       // This corrected logic checks the number of stars at the right time
-      if (stars === 5) {
-        setStarLevel(prevLevel => prevLevel + 1);
-        setStars(1);
-      } else {
-        setStars(prevStars => prevStars + 1);
+      setStars(prevStars => {
+      if (prevStars === 5) {
+        // Use a functional update for starLevel to avoid stale state
+        setStarLevel(prevLevel => {
+          const newLevel = prevLevel + 1;
+          // Don't let the level number itself reset, just let the colors loop in the StarTracker
+          return newLevel;
+        });
+        return 1;
       }
-    }
+      return prevStars + 1;
+    });
+  }
 
     // Handle progress bar updates
     setProgress(prevProgress => {
@@ -253,6 +273,7 @@ const MathGame = () => {
   const problemKey = `${problem.part1}-${problem.part2}-${currentSentenceIdx}`;
   const activeSentence = sentences[currentSentenceIdx];
   const [partBefore, partAfter] = activeSentence.text.split('?');
+  const isMasteryLevel = starLevel >= 10;
 
   return (
     <div className="flex flex-col justify-center items-center min-h-screen bg-blue-50 font-sans p-4">
@@ -263,12 +284,30 @@ const MathGame = () => {
         <button onClick={() => setGameMode('pattern')} className={`px-4 py-2 rounded-md font-semibold ${gameMode === 'pattern' ? 'bg-purple-600 text-white' : 'bg-white text-purple-600'}`}>Patterns</button>
       </div>
       
+      <ProgressBar progress={progress} goal={goal} />
+      {isMasteryLevel && <DancingUnicorn />}
 
-       {/* --- Star Tracker and Progress Bar --- */}
-        <div className="w-full max-w-sm">
-          <ProgressBar progress={progress} goal={goal} />
-          <StarTracker count={stars} level={starLevel} />
-        </div>
+        <div className="w-full max-w-sm relative h-20">
+        {/*
+          This container will now be positioned relative to allow the stars
+          to be positioned absolutely inside it for the rolling animation.
+        */}
+        
+        {/* --- STAR TRACKER LOGIC --- */}
+        {isMasteryLevel ? (
+          // If it's mastery level, wrap the StarTracker in the rolling container
+          <div className="animate-card-roll">
+            <StarTracker count={stars} level={starLevel} />
+          </div>
+        ) : (
+          // Otherwise, display it normally in the center
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+            <StarTracker count={stars} level={starLevel} />
+          </div>
+        )}
+      </div>
+
+      
 
       {/* --- Main Game Card --- */}
       <motion.div 
