@@ -550,6 +550,18 @@ const MathGame = () => {
     if (value === correctAnswer) {
       handleCorrectAnswer(); // This properly awards points/confetti
       
+      switch(type) {
+        case 'comparison':
+          setFilledOperator(value);
+          break;
+        case 'pattern':
+          setFilledPatternAnswer(value);
+          break;
+        case 'numberBond':
+          setFilledAnswer(value); // This assumes a single-stage bond for mixed mode
+          break;
+      }
+
       const isGoalMet = (progress + 1) >= goal;
       const transitionDelay = isGoalMet ? 4000 : 1200;
 
@@ -558,6 +570,9 @@ const MathGame = () => {
         setFilledLadderAnswers(prev => [...prev, value]); // Show correct answer
         if (ladderStep < data.answers.length - 1) {
           setLadderStep(prev => prev + 1); // Go to next step
+          setTimeout(() => {
+            setFeedback({ type: "", message: "" });
+          }, 1200);
           return; // Don't move to the next problem yet
         }
       }
@@ -789,14 +804,13 @@ const MathGame = () => {
             const { type, data } = mixedProblem;
             switch (type) {
               case 'numberBond':
-                // We need choices for the number bond game
                 const bondAnswer = data.blank === 'whole' ? data.whole : data.blank === 'left' ? data.part1 : data.part2;
                 const bondChoices = generateBondChoices(bondAnswer, maxTotal);
                 return (
                   <>
                     <div className="text-center min-h-[180px]">
-                      <CountingCubes part1={data.part1} part2={data.part2} />
-                      <NumberBond problem={data} />
+                      <div className="mb-4"><CountingCubes part1={data.part1} part2={data.part2} /></div>
+                      <NumberBond problem={data} filledAnswer={filledAnswer} />
                     </div>
                     <MultipleChoice choices={bondChoices} onSelect={handleMixedAnswer} />
                   </>
@@ -807,54 +821,64 @@ const MathGame = () => {
                     <div className="flex justify-around items-center text-center">
                       <div className="w-1/3">
                         <CubeDisplay count={data.num1} color="bg-sky-400" />
-                        <div className="text-6xl font-bold">{data.num1}</div>
+                        <div className="text-6xl font-bold text-gray-700">{data.num1}</div>
                       </div>
-                      <div className="w-1/3 flex justify-center ..."><div className="w-20 h-20 border-4 ..."></div></div>
+                      <div className="w-1/3 flex justify-center items-center h-24">
+                        {filledOperator ? (
+                          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-6xl font-bold text-purple-600">{filledOperator}</motion.div>
+                        ) : (
+                          <div className="w-20 h-20 border-4 border-dashed border-gray-300 rounded-full"></div>
+                        )}
+                      </div>
                       <div className="w-1/3">
                         <CubeDisplay count={data.num2} color="bg-amber-400" />
-                        <div className="text-6xl font-bold">{data.num2}</div>
+                        <div className="text-6xl font-bold text-gray-700">{data.num2}</div>
                       </div>
                     </div>
-                    <OperatorButtons onSelect={handleMixedAnswer} />
+                    <OperatorButtons onSelect={handleMixedAnswer} disabled={filledOperator !== null} />
                   </div>
                 );
               case 'pattern':
                 return (
                     <div className="text-center min-h-[300px]">
-                      <h3 className="text-2xl ...">What number comes next?</h3>
-                      <div className="flex justify-center ...">
+                      <h3 className="text-2xl font-bold text-gray-600 mb-4">What number comes next?</h3>
+                      <div className="flex justify-center items-center text-4xl font-bold text-gray-700 p-4 bg-gray-100 rounded-lg">
                         {data.sequence.map((num) => (
                           <React.Fragment key={num}>
                             <span>{num}</span>
-                            <span className="mx-3 ...">→</span>
+                            <span className="mx-3 text-3xl text-gray-400">→</span>
                           </React.Fragment>
                         ))}
-                        <span className="text-purple-500">?</span>
+                        {filledPatternAnswer !== null ? (
+                          <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-purple-600">{filledPatternAnswer}</motion.span>
+                        ) : (
+                          <span className="text-purple-500">?</span>
+                        )}
                       </div>
-                      <MultipleChoice choices={data.choices} onSelect={handleMixedAnswer} />
+                      <MultipleChoice choices={data.choices} onSelect={handleMixedAnswer} disabled={filledPatternAnswer !== null}/>
                     </div>
                   );
               case 'weightPuzzle':
                 return (
                   <div>
-                    <h3 className="text-2xl ...">Make the scale balance!</h3>
+                    <h3 className="text-2xl font-bold text-gray-600 mb-4 text-center">Make the scale balance!</h3>
                     <div className={puzzleAnimation}><WeightPuzzle problem={data} /></div>
-                    <NumberPad maxNumber={maxTotal} onNumberClick={handleMixedAnswer} />
+                    <NumberPad maxNumber={maxTotal} onNumberClick={handleMixedAnswer} disabled={feedback.type === 'correct'}/>
                   </div>
                 );
               case 'numberLadder':
                 return (
                   <div>
                     <NumberLadder problem={data} filledAnswers={filledLadderAnswers} />
-                    <NumberPad maxNumber={maxTotal * 2} onNumberClick={handleMixedAnswer} />
+                    <MultipleChoice choices={ladderChoices} onSelect={handleMixedAnswer} disabled={feedback.type === 'correct'}/>
                   </div>
                 );
               case 'shapePuzzle':
                 return (
                   <div className="text-center">
-                    <h3 className="text-2xl ...">{data.question}</h3>
+                    <h3 className="text-2xl font-bold text-gray-600 mb-4">{data.question}</h3>
                     <ShapePuzzle problem={data} />
-                    <NumberPad maxNumber={10} onNumberClick={handleMixedAnswer} />
+                    <NumberPad maxNumber={10} onNumberClick={handleMixedAnswer} disabled={feedback.type === 'correct'}/>
                   </div>
                 );
               default:
