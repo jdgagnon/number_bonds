@@ -284,27 +284,13 @@ const MathGame = () => {
         <button onClick={() => setGameMode('pattern')} className={`px-4 py-2 rounded-md font-semibold ${gameMode === 'pattern' ? 'bg-purple-600 text-white' : 'bg-white text-purple-600'}`}>Patterns</button>
       </div>
       
-      <ProgressBar progress={progress} goal={goal} />
+      {/* Conditionally render the unicorn when mastery level is reached */}
       {isMasteryLevel && <DancingUnicorn />}
 
-        <div className="w-full max-w-sm relative h-20">
-        {/*
-          This container will now be positioned relative to allow the stars
-          to be positioned absolutely inside it for the rolling animation.
-        */}
-        
-        {/* --- STAR TRACKER LOGIC --- */}
-        {isMasteryLevel ? (
-          // If it's mastery level, wrap the StarTracker in the rolling container
-          <div className="animate-card-roll">
-            <StarTracker count={stars} level={starLevel} />
-          </div>
-        ) : (
-          // Otherwise, display it normally in the center
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-            <StarTracker count={stars} level={starLevel} />
-          </div>
-        )}
+      {/* --- Star Tracker and Progress Bar --- */}
+      <div className="w-full max-w-sm mb-4">
+        <StarTracker count={stars} level={starLevel} />
+        <ProgressBar progress={progress} goal={goal} />
       </div>
 
       
