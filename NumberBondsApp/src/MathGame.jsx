@@ -11,8 +11,46 @@ import CubeDisplay from './CubeDisplay';
 import MultipleChoice from './MultipleChoice';
 import Feedback from './Feedback';
 import DancingUnicorn from './DancingUnicorn'; 
+import WeightPuzzle from './WeightPuzzle';
+import NumberLadder from './NumberLadder';
+import ShapePuzzle from './ShapePuzzle';
 
 // --- Helper Functions ---
+const GAME_TYPES = ['numberBond', 'comparison', 'pattern', 'weightPuzzle', 'numberLadder', 'shapePuzzle'];
+
+const generateRandomProblem = (max) => {
+  // 1. Pick a random game type from the list
+  const randomType = GAME_TYPES[Math.floor(Math.random() * GAME_TYPES.length)];
+  let problemData;
+
+  // 2. Call the appropriate generator for that type
+  switch (randomType) {
+    case 'numberBond':
+      problemData = generateProblem(max);
+      break;
+    case 'comparison':
+      problemData = generateComparisonProblem(max);
+      break;
+    case 'pattern':
+      problemData = generatePatternProblem(max * 2);
+      break;
+    case 'weightPuzzle':
+      problemData = generateWeightProblem(max);
+      break;
+    case 'numberLadder':
+      problemData = generateLadderProblem(max);
+      break;
+    case 'shapePuzzle':
+      problemData = generateShapeProblem();
+      break;
+    default:
+      problemData = generateProblem(max); // Fallback
+  }
+  
+  // 3. Return an object with both the type and the data
+  return { type: randomType, data: problemData };
+};
+
 const generateBondChoices = (correctAnswer, max) => {
   const choices = new Set([correctAnswer]);
   while (choices.size < 8) {
@@ -83,20 +121,122 @@ const generatePatternProblem = (max) => {
   
   // Shuffle the choices
   const shuffledChoices = Array.from(choices).sort(() => Math.random() - 0.5);
-
   return { sequence, choices: shuffledChoices, answer };
 };
 
+const generateWeightProblem = (max) => {
+  const leftWeight1 = Math.floor(Math.random() * (max / 2)) + 1;
+  const leftWeight2 = Math.floor(Math.random() * (max / 2)) + 1;
+  const totalLeft = leftWeight1 + leftWeight2;
+
+  const rightWeight1 = Math.floor(Math.random() * (totalLeft - 1)) + 1;
+  const answer = totalLeft - rightWeight1;
+
+  const problem = {
+    leftSide: [
+      { color: 'bg-sky-400', shape: 'square', weight: leftWeight1 },
+      { color: 'bg-sky-400', shape: 'square', weight: leftWeight2 },
+    ],
+    rightSide: [
+      { color: 'bg-amber-400', shape: 'circle', weight: rightWeight1 },
+    ],
+    unknownShape: { color: 'bg-fuchsia-400', shape: 'square' },
+    answer: answer,
+  };
+  return problem;
+};
+
+const generateLadderProblem = (max) => {
+  const operations = [
+    { text: 'Add 2', operation: (n) => n + 2 },
+    { text: 'Subtract 3', operation: (n) => n - 3, requires: 3 }, // requires: n >= 3
+    { text: 'Add 5', operation: (n) => n + 5 },
+    { text: 'Add 10', operation: (n) => n + 10 },
+  ];
+  
+  // Start with a higher number to give subtraction a chance
+  const startNumber = Math.floor(Math.random() * 10) + 5; 
+  const steps = [];
+  const answers = [];
+  let currentVal = startNumber;
+
+  for (let i = 0; i < 3; i++) {
+    // Filter to only include valid operations
+    const validOps = operations.filter(op => {
+      // If an operation has a 'requires' property, check if the current value meets it
+      // Otherwise, it's always valid (like addition)
+      return !op.requires || currentVal >= op.requires;
+    });
+
+    // Choose a random operation from the valid list
+    const op = validOps[Math.floor(Math.random() * validOps.length)];
+    
+    steps.push(op);
+    currentVal = op.operation(currentVal);
+    answers.push(currentVal);
+  }
+
+  return { startNumber, steps, answers };
+};
+
+const generateShapeProblem = () => {
+  const puzzles = [
+    {
+      question: "How many triangles are in the rocket?",
+      answer: 4,
+      width: 120,
+      height: 160,
+      shapes: [
+        // Rocket Body (large triangle)
+        { type: 'polygon', points: "60,10 20,110 100,110", className: "fill-gray-300 stroke-gray-500 stroke-2" },
+        // Nose Cone (small triangle)
+        { type: 'polygon', points: "60,10 40,40 80,40", className: "fill-red-500 stroke-red-700 stroke-2" },
+        // Left Fin (small triangle)
+        { type: 'polygon', points: "20,110 20,80 5,110", className: "fill-blue-500 stroke-blue-700 stroke-2" },
+        // Right Fin (small triangle)
+        { type: 'polygon', points: "100,110 100,80 115,110", className: "fill-blue-500 stroke-blue-700 stroke-2" },
+        // Window (not a triangle, distractor)
+        { type: 'rect', x: 50, y: 60, width: 20, height: 20, className: "fill-cyan-200 stroke-cyan-400 stroke-2" }
+      ],
+    },
+    {
+      question: "How many rectangles are in the house?",
+      answer: 2,
+      width: 140,
+      height: 140,
+      shapes: [
+        // House Body (large rectangle)
+        { type: 'rect', x: 20, y: 70, width: 100, height: 70, className: "fill-yellow-300 stroke-yellow-500 stroke-2" },
+        // Door (small rectangle)
+        { type: 'rect', x: 55, y: 100, width: 30, height: 40, className: "fill-orange-400 stroke-orange-600 stroke-2" },
+        // Roof (not a rectangle, distractor)
+        { type: 'polygon', points: "10,70 130,70 70,20", className: "fill-red-500 stroke-red-700 stroke-2" },
+      ]
+    }
+  ];
+  // Return a random puzzle from the list
+  return puzzles[Math.floor(Math.random() * puzzles.length)];
+};
+
+// --- CONSTANTS ---
 const CORRECT_MESSAGES = ["Awesome!", "You got it!", "Super!", "Brilliant!", "Fantastic!"];
 
 // --- Main Component ---
 const MathGame = () => {
+  const [maxTotal, setMaxTotal] = useState(10);
   const [gameMode, setGameMode] = useState('numberBond'); // 'numberBond', 'comparison', or 'pattern'
   const [patternProblem, setPatternProblem] = useState(() => generatePatternProblem(20));
   const [filledPatternAnswer, setFilledPatternAnswer] = useState(null);
   const [comparisonProblem, setComparisonProblem] = useState(() => generateComparisonProblem(10));
   const [filledOperator, setFilledOperator] = useState(null);
-  const [maxTotal, setMaxTotal] = useState(10);
+  const [weightProblem, setWeightProblem] = useState(() => generateWeightProblem(10));
+  const [puzzleAnimation, setPuzzleAnimation] = useState(""); // For tipping animation
+  const [ladderProblem, setLadderProblem] = useState(() => generateLadderProblem(10));
+  const [ladderStep, setLadderStep] = useState(0); // Which step we are on
+  const [filledLadderAnswers, setFilledLadderAnswers] = useState([]);
+  const [ladderChoices, setLadderChoices] = useState([]);
+  const [shapeProblem, setShapeProblem] = useState(() => generateShapeProblem());
+  const [mixedProblem, setMixedProblem] = useState(() => generateRandomProblem(maxTotal));
   const [problem, setProblem] = useState(() => generateProblem(maxTotal));
   const [numberBondChoices, setNumberBondChoices] = useState(() => {
     const initialProblem = generateProblem(10);
@@ -118,7 +258,6 @@ const MathGame = () => {
     const savedStars = localStorage.getItem('mathGameStars');
     return savedStars !== null ? JSON.parse(savedStars) : 0;
   });
-
   const [starLevel, setStarLevel] = useState(() => {
     const savedLevel = localStorage.getItem('mathGameStarLevel');
     return savedLevel !== null ? JSON.parse(savedLevel) : 0;
@@ -146,6 +285,27 @@ const MathGame = () => {
     setNumberBondChoices(generateBondChoices(correctAnswer, maxTotal));
   }, [problem, stage, currentSentenceIdx, gameMode, sentences, maxTotal]);
 
+  // Re-generate answer choices for ladderProblem
+  useEffect(() => {
+    // This effect runs only when the ladder game is active
+    if (gameMode === 'numberLadder' || (gameMode === 'mixed' && mixedProblem.type === 'numberLadder')) {
+      // Determine if we're in mixed mode or regular mode
+      const problemSource = gameMode === 'mixed' ? mixedProblem.data : ladderProblem;
+      
+      // Check if the problem and current step are valid
+      if (problemSource && problemSource.answers && problemSource.answers[ladderStep] !== undefined) {
+        const correctAnswer = problemSource.answers[ladderStep];
+        
+        // Ensure the choices generated are in a reasonable range around the answer
+        const maxChoiceValue = Math.max(20, correctAnswer + 10); 
+        
+        // Use our existing helper function to generate 8 choices
+        setLadderChoices(generateBondChoices(correctAnswer, maxChoiceValue));
+      }
+    }
+  }, [gameMode, ladderProblem, mixedProblem, ladderStep]);
+
+  // --- NEXT PROBLEM FUNCTION ---
   const moveToNextProblem = useCallback(() => {
     const newProblem = generateProblem(maxTotal);
     setProblem(newProblem);
@@ -158,48 +318,7 @@ const MathGame = () => {
     // REMOVED choice generation logic from here
   }, [maxTotal]);
 
-  const handlePatternAnswer = (choice) => {
-    if (choice === patternProblem.answer) {
-      const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
-      setFeedback({ type: "correct", message: `✅ ${randomMessage}` });
-      setFilledPatternAnswer(choice);
-      awardPoint();
-      
-      // ADD THESE TWO LINES
-      const isGoalMet = (progress + 1) >= goal;
-      const transitionDelay = isGoalMet ? 4000 : 1200;
-      
-      setTimeout(() => {
-        setPatternProblem(generatePatternProblem(maxTotal * 2));
-        setFilledPatternAnswer(null);
-        setFeedback({ type: "", message: "" });
-      }, transitionDelay); // Use the calculated delay
-    } else {
-      handleIncorrectAnswer();
-    }
-  };
-  
-  const handleComparisonAnswer = (op) => {
-    if (op === comparisonProblem.answer) {
-      const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
-      setFeedback({ type: "correct", message: `✅ ${randomMessage}` });
-      setFilledOperator(op);
-      awardPoint();
-      
-      // ADD THESE TWO LINES
-      const isGoalMet = (progress + 1) >= goal;
-      const transitionDelay = isGoalMet ? 4000 : 1200;
-      
-      setTimeout(() => {
-        setComparisonProblem(generateComparisonProblem(maxTotal));
-        setFilledOperator(null);
-        setFeedback({ type: "", message: "" });
-      }, transitionDelay); // Use the calculated delay
-    } else {
-      handleIncorrectAnswer();
-    }
-  };
-
+  // --- AWARD POINT FUNCTION ---
   const awardPoint = () => {
     const isGoalMet = (progress + 1) >= goal;
 
@@ -230,11 +349,20 @@ const MathGame = () => {
     });
   };
 
+  // --- GENERAL CORRECT ANSWER HANDLER ---
+  const handleCorrectAnswer = () => {
+    const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
+    setFeedback({ type: "correct", message: `✅ ${randomMessage}` });
+    awardPoint();
+  };
+
+  // --- GENERAL INCORRECT ANSWER HANDLER ---
   const handleIncorrectAnswer = () => {
     setFeedback({ type: "incorrect", message: "❌ Oops, try again!" });
     setProgress(prevProgress => Math.max(0, prevProgress - 1));
   };
 
+  // -- ANSWER HANDLER FOR NUMBER BOND AND NUMBER SENTENCES ---
   const handleAnswer = (value) => {
     let correctAnswer;
     if (stage === "bond") {
@@ -270,6 +398,180 @@ const MathGame = () => {
     }
   };
 
+  // --- ANSWER HANDLER for the pattern game ---
+  const handlePatternAnswer = (choice) => {
+    if (choice === patternProblem.answer) {
+      const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
+      setFeedback({ type: "correct", message: `✅ ${randomMessage}` });
+      setFilledPatternAnswer(choice);
+      awardPoint();
+      
+      // ADD THESE TWO LINES
+      const isGoalMet = (progress + 1) >= goal;
+      const transitionDelay = isGoalMet ? 4000 : 1200;
+      
+      setTimeout(() => {
+        setPatternProblem(generatePatternProblem(maxTotal * 2));
+        setFilledPatternAnswer(null);
+        setFeedback({ type: "", message: "" });
+      }, transitionDelay); // Use the calculated delay
+    } else {
+      handleIncorrectAnswer();
+    }
+  };
+  
+  // --- ANSWER HANDLER for the comparison game ---
+  const handleComparisonAnswer = (op) => {
+    if (op === comparisonProblem.answer) {
+      const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
+      setFeedback({ type: "correct", message: `✅ ${randomMessage}` });
+      setFilledOperator(op);
+      awardPoint();
+      
+      // ADD THESE TWO LINES
+      const isGoalMet = (progress + 1) >= goal;
+      const transitionDelay = isGoalMet ? 4000 : 1200;
+      
+      setTimeout(() => {
+        setComparisonProblem(generateComparisonProblem(maxTotal));
+        setFilledOperator(null);
+        setFeedback({ type: "", message: "" });
+      }, transitionDelay); // Use the calculated delay
+    } else {
+      handleIncorrectAnswer();
+    }
+  };
+
+  // --- ANSWER HANDLER for the weight puzzle ---
+  const handleWeightAnswer = (value) => {
+    if (value === weightProblem.answer) {
+      handleCorrectAnswer(); // <-- Use the new function here
+
+      const isGoalMet = (progress + 1) >= goal;
+      const transitionDelay = isGoalMet ? 4000 : 1200;
+
+      setTimeout(() => {
+        setWeightProblem(generateWeightProblem(maxTotal));
+        setFeedback({ type: "", message: "" });
+      }, transitionDelay);
+    } else {
+      handleIncorrectAnswer();
+      setPuzzleAnimation("animate-tip-wrong");
+      setTimeout(() => setPuzzleAnimation(""), 500);
+    }
+  };
+
+  // --- ANSWER HANDLER for the number ladder ---
+  const handleLadderAnswer = (value) => {
+    if (value === ladderProblem.answers[ladderStep]) {
+      const newAnswers = [...filledLadderAnswers, value];
+      setFilledLadderAnswers(newAnswers);
+      
+      if (ladderStep === ladderProblem.answers.length - 1) {
+        handleCorrectAnswer(); // <-- Use the new function here
+
+        const isGoalMet = (progress + 1) >= goal;
+        const transitionDelay = isGoalMet ? 4000 : 1200;
+
+        setTimeout(() => {
+          setLadderProblem(generateLadderProblem(maxTotal));
+          setFilledLadderAnswers([]);
+          setLadderStep(0);
+          setFeedback({ type: "", message: "" });
+        }, transitionDelay);
+      } else {
+        setLadderStep(prevStep => prevStep + 1);
+        setFeedback({ type: "", message: "" }); // Clear feedback for next step
+      }
+    } else {
+      handleIncorrectAnswer();
+    }
+  };
+
+  // --- ANSWER HANDLER for the shape puzzle ---
+  const handleShapeAnswer = (value) => {
+    if (value === shapeProblem.answer) {
+      handleCorrectAnswer(); // <-- Use the new function here
+
+      const isGoalMet = (progress + 1) >= goal;
+      const transitionDelay = isGoalMet ? 4000 : 1200;
+
+      setTimeout(() => {
+        setShapeProblem(generateShapeProblem());
+        setFeedback({ type: "", message: "" });
+      }, transitionDelay);
+    } else {
+      handleIncorrectAnswer();
+    }
+  };
+
+  // NEW: Add a function to advance to the next mixed problem
+  const moveToNextMixedProblem = useCallback(() => {
+    setMixedProblem(generateRandomProblem(maxTotal));
+    // Reset any game-specific states if necessary
+    setFilledOperator(null);
+    setFilledPatternAnswer(null);
+    setFilledLadderAnswers([]);
+    setLadderStep(0);
+    setFeedback({ type: "", message: "" });
+  }, [maxTotal]);
+
+  // NEW: Create a universal answer handler for the mixed mode
+  const handleMixedAnswer = (value) => {
+    const { type, data } = mixedProblem;
+    let correctAnswer;
+
+    // Determine the correct answer based on the problem type
+    switch (type) {
+      case 'numberBond':
+        correctAnswer = data.blank === 'whole' ? data.whole : data.blank === 'left' ? data.part1 : data.part2;
+        break;
+      case 'comparison':
+        correctAnswer = data.answer;
+        break;
+      case 'pattern':
+        correctAnswer = data.answer;
+        break;
+      case 'weightPuzzle':
+        correctAnswer = data.answer;
+        break;
+      case 'numberLadder':
+        // For ladders, the answer depends on the current step
+        correctAnswer = data.answers[ladderStep];
+        break;
+      case 'shapePuzzle':
+        correctAnswer = data.answer;
+        break;
+      default:
+        return;
+    }
+    
+    // Check the answer and proceed
+    if (value === correctAnswer) {
+      handleCorrectAnswer(); // This properly awards points/confetti
+      
+      const isGoalMet = (progress + 1) >= goal;
+      const transitionDelay = isGoalMet ? 4000 : 1200;
+
+      // Special handling for multi-step ladder game
+      if (type === 'numberLadder') {
+        setFilledLadderAnswers(prev => [...prev, value]); // Show correct answer
+        if (ladderStep < data.answers.length - 1) {
+          setLadderStep(prev => prev + 1); // Go to next step
+          return; // Don't move to the next problem yet
+        }
+      }
+
+      setTimeout(moveToNextMixedProblem, transitionDelay);
+    } else {
+      handleIncorrectAnswer();
+      if (type === 'weightPuzzle') { // Trigger animation for this specific game
+        setPuzzleAnimation("animate-tip-wrong");
+        setTimeout(() => setPuzzleAnimation(""), 500);
+      }
+    }
+  };
+
   const problemKey = `${problem.part1}-${problem.part2}-${currentSentenceIdx}`;
   const activeSentence = sentences[currentSentenceIdx];
   const [partBefore, partAfter] = activeSentence.text.split('?');
@@ -278,14 +580,40 @@ const MathGame = () => {
   return (
     <div className="flex flex-col justify-center items-center min-h-screen bg-blue-50 font-sans p-4 overflow-x-hidden">
       {/* --- Game Mode Switcher --- */}
-      <div className="flex gap-2 p-2 bg-purple-200 rounded-lg mb-4">
-        <button onClick={() => setGameMode('numberBond')} className={`px-4 py-2 rounded-md font-semibold ${gameMode === 'numberBond' ? 'bg-purple-600 text-white' : 'bg-white text-purple-600'}`}>Number Bonds</button>
-        <button onClick={() => setGameMode('comparison')} className={`px-4 py-2 rounded-md font-semibold ${gameMode === 'comparison' ? 'bg-purple-600 text-white' : 'bg-white text-purple-600'}`}>Comparison</button>
-        <button onClick={() => setGameMode('pattern')} className={`px-4 py-2 rounded-md font-semibold ${gameMode === 'pattern' ? 'bg-purple-600 text-white' : 'bg-white text-purple-600'}`}>Patterns</button>
+      <div className="flex items-center gap-2 p-2 bg-purple-200 rounded-lg mb-4">
+        <label htmlFor="game-mode-select" className="font-semibold text-purple-800">
+          Game Mode:
+        </label>
+        
+        {/* Add a relative container for positioning the custom arrow */}
+        <div className="relative">
+          <select
+            id="game-mode-select"
+            value={gameMode}
+            onChange={(e) => setGameMode(e.target.value)}
+            // The 'appearance-none' class hides the default browser arrow
+            className="appearance-none w-full px-4 py-2 pr-8 rounded-md font-semibold bg-white text-purple-600 border-2 border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
+          >
+            <option value="numberBond">Number Bonds</option>
+            <option value="comparison">Comparison</option>
+            <option value="pattern">Patterns</option>
+            <option value="weightPuzzle">Weight Puzzle</option>
+            <option value="numberLadder">Number Ladders</option>
+            <option value="shapePuzzle">Shape Puzzles</option>
+            <option value="mixed">Mixed Review 🎲</option>
+          </select>
+          
+          {/* Custom Arrow SVG Icon */}
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-purple-600">
+            <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+              <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+            </svg>
+          </div>
+        </div>
       </div>
       
       {/* Conditionally render the unicorn when mastery level is reached */}
-      {isMasteryLevel && <DancingUnicorn />}
+      {/* {isMasteryLevel && <DancingUnicorn />} */}
 
       {/* --- Star Tracker and Progress Bar --- */}
       <div className="w-full max-w-sm mb-4">
@@ -392,8 +720,8 @@ const MathGame = () => {
             </div>
             <OperatorButtons onSelect={handleComparisonAnswer} disabled={filledOperator !== null} />
           </div>
-        ): (
-          // --- NEW: PATTERN GAME UI ---
+        ): gameMode === 'pattern' ? (
+          // --- PATTERN GAME UI ---
           <div className="text-center min-h-[300px]">
             <h3 className="text-2xl font-bold text-gray-600 mb-4">What number comes next?</h3>
             <div className="flex justify-center items-center text-4xl font-bold text-gray-700 p-4 bg-gray-100 rounded-lg">
@@ -421,7 +749,120 @@ const MathGame = () => {
               disabled={filledPatternAnswer !== null}
             />
           </div>
+        ) : gameMode === 'weightPuzzle' ? (
+          // --- WEIGHT PUZZLE GAME UI ---
+          <div>
+            <h3 className="text-2xl font-bold text-gray-600 mb-4 text-center">Make the scale balance!</h3>
+            <div className={puzzleAnimation}>
+              <WeightPuzzle problem={weightProblem} />
+            </div>
+            <NumberPad 
+              maxNumber={maxTotal} 
+              onNumberClick={handleWeightAnswer} 
+              disabled={feedback.type === 'correct'}
+            />
+          </div>
+        ): gameMode === 'numberLadder' ? (
+          // --- NUMBER LADDER UI ---
+          <div>
+            <NumberLadder problem={ladderProblem} filledAnswers={filledLadderAnswers} />
+            <MultipleChoice
+              choices={ladderChoices}
+              onSelect={handleLadderAnswer}
+              disabled={feedback.type === 'correct'}
+            />
+          </div>
+        ): gameMode === 'shapePuzzle' ? (
+          // -- SHAPE PUZZLE ---
+          <div className="text-center">
+            <h3 className="text-2xl font-bold text-gray-600 mb-4">{shapeProblem.question}</h3>
+            <ShapePuzzle problem={shapeProblem} />
+            <NumberPad 
+              maxNumber={10} // The number of shapes to count is usually small
+              onNumberClick={handleShapeAnswer}
+              disabled={feedback.type === 'correct'}
+            />
+          </div>
+        ): (
+          // --- MIXED GAME UI ---
+          (() => {
+            const { type, data } = mixedProblem;
+            switch (type) {
+              case 'numberBond':
+                // We need choices for the number bond game
+                const bondAnswer = data.blank === 'whole' ? data.whole : data.blank === 'left' ? data.part1 : data.part2;
+                const bondChoices = generateBondChoices(bondAnswer, maxTotal);
+                return (
+                  <>
+                    <div className="text-center min-h-[180px]">
+                      <CountingCubes part1={data.part1} part2={data.part2} />
+                      <NumberBond problem={data} />
+                    </div>
+                    <MultipleChoice choices={bondChoices} onSelect={handleMixedAnswer} />
+                  </>
+                );
+              case 'comparison':
+                return (
+                  <div>
+                    <div className="flex justify-around items-center text-center">
+                      <div className="w-1/3">
+                        <CubeDisplay count={data.num1} color="bg-sky-400" />
+                        <div className="text-6xl font-bold">{data.num1}</div>
+                      </div>
+                      <div className="w-1/3 flex justify-center ..."><div className="w-20 h-20 border-4 ..."></div></div>
+                      <div className="w-1/3">
+                        <CubeDisplay count={data.num2} color="bg-amber-400" />
+                        <div className="text-6xl font-bold">{data.num2}</div>
+                      </div>
+                    </div>
+                    <OperatorButtons onSelect={handleMixedAnswer} />
+                  </div>
+                );
+              case 'pattern':
+                return (
+                    <div className="text-center min-h-[300px]">
+                      <h3 className="text-2xl ...">What number comes next?</h3>
+                      <div className="flex justify-center ...">
+                        {data.sequence.map((num) => (
+                          <React.Fragment key={num}>
+                            <span>{num}</span>
+                            <span className="mx-3 ...">→</span>
+                          </React.Fragment>
+                        ))}
+                        <span className="text-purple-500">?</span>
+                      </div>
+                      <MultipleChoice choices={data.choices} onSelect={handleMixedAnswer} />
+                    </div>
+                  );
+              case 'weightPuzzle':
+                return (
+                  <div>
+                    <h3 className="text-2xl ...">Make the scale balance!</h3>
+                    <div className={puzzleAnimation}><WeightPuzzle problem={data} /></div>
+                    <NumberPad maxNumber={maxTotal} onNumberClick={handleMixedAnswer} />
+                  </div>
+                );
+              case 'numberLadder':
+                return (
+                  <div>
+                    <NumberLadder problem={data} filledAnswers={filledLadderAnswers} />
+                    <NumberPad maxNumber={maxTotal * 2} onNumberClick={handleMixedAnswer} />
+                  </div>
+                );
+              case 'shapePuzzle':
+                return (
+                  <div className="text-center">
+                    <h3 className="text-2xl ...">{data.question}</h3>
+                    <ShapePuzzle problem={data} />
+                    <NumberPad maxNumber={10} onNumberClick={handleMixedAnswer} />
+                  </div>
+                );
+              default:
+                return <div>Loading problem...</div>;
+            }
+          })()
         )}
+
         <Feedback feedback={feedback} />
 
       </motion.div>
