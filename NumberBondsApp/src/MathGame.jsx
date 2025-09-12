@@ -276,7 +276,7 @@ const MathGame = () => {
   const isMasteryLevel = starLevel >= 10;
 
   return (
-    <div className="flex flex-col justify-center items-center min-h-screen bg-blue-50 font-sans p-4">
+    <div className="flex flex-col justify-center items-center min-h-screen bg-blue-50 font-sans p-4 overflow-x-hidden">
       {/* --- Game Mode Switcher --- */}
       <div className="flex gap-2 p-2 bg-purple-200 rounded-lg mb-4">
         <button onClick={() => setGameMode('numberBond')} className={`px-4 py-2 rounded-md font-semibold ${gameMode === 'numberBond' ? 'bg-purple-600 text-white' : 'bg-white text-purple-600'}`}>Number Bonds</button>

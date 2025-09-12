@@ -15,7 +15,6 @@ body {
   /* Add these to ensure full-screen elements can display */
   width: 100vw;
   height: 100vh;
-  overflow: hidden; /* Hide any overflow from the unicorn crossing */
 }
 
 @keyframes glow {
