@@ -125,13 +125,30 @@ body {
   100% { opacity: 0; transform: scale(0.5); }
 }
 
-/* At the bottom of src/index.css */
-@keyframes tip-wrong {
+@keyframes tip-left {
   0%, 100% { transform: rotate(0deg); }
-  25% { transform: rotate(-5deg); }
-  75% { transform: rotate(5deg); }
+  50% { transform: rotate(-5deg); }
 }
 
-.animate-tip-wrong {
-  animation: tip-wrong 0.5s ease-in-out;
+@keyframes tip-right {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(5deg); }
+}
+
+@keyframes balance-correct {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-2deg); }
+  75% { transform: rotate(2deg); }
+}
+
+.animate-tip-left {
+  animation: tip-left 0.5s ease-in-out;
+}
+
+.animate-tip-right {
+  animation: tip-right 0.5s ease-in-out;
+}
+
+.animate-balance-correct {
+  animation: balance-correct 0.5s ease-in-out;
 }

@@ -230,11 +230,13 @@ const MathGame = () => {
   const [comparisonProblem, setComparisonProblem] = useState(() => generateComparisonProblem(10));
   const [filledOperator, setFilledOperator] = useState(null);
   const [weightProblem, setWeightProblem] = useState(() => generateWeightProblem(10));
+  const [filledWeightAnswer, setFilledWeightAnswer] = useState(null);
   const [puzzleAnimation, setPuzzleAnimation] = useState(""); // For tipping animation
   const [ladderProblem, setLadderProblem] = useState(() => generateLadderProblem(10));
   const [ladderStep, setLadderStep] = useState(0); // Which step we are on
   const [filledLadderAnswers, setFilledLadderAnswers] = useState([]);
   const [ladderChoices, setLadderChoices] = useState([]);
+  const [weightPuzzleChoices, setWeightPuzzleChoices] = useState([]);
   const [shapeProblem, setShapeProblem] = useState(() => generateShapeProblem());
   const [mixedProblem, setMixedProblem] = useState(() => generateRandomProblem(maxTotal));
   const [problem, setProblem] = useState(() => generateProblem(maxTotal));
@@ -304,6 +306,24 @@ const MathGame = () => {
       }
     }
   }, [gameMode, ladderProblem, mixedProblem, ladderStep]);
+
+  // Re-generate answer choices for weightPuzzle
+  useEffect(() => {
+    // This effect runs only when the weight puzzle is active
+    if (gameMode === 'weightPuzzle' || (gameMode === 'mixed' && mixedProblem.type === 'weightPuzzle')) {
+      // Determine the source of the problem data
+      const problemSource = gameMode === 'mixed' ? mixedProblem.data : weightProblem;
+      
+      if (problemSource && problemSource.answer !== undefined) {
+        const correctAnswer = problemSource.answer;
+        // Set a reasonable max value for generating distractor choices
+        const maxChoiceValue = Math.max(maxTotal, correctAnswer + 5);
+        
+        // Reuse our handy helper function to create the 8 choices
+        setWeightPuzzleChoices(generateBondChoices(correctAnswer, maxChoiceValue));
+      }
+    }
+  }, [gameMode, weightProblem, mixedProblem, maxTotal]);
 
   // --- NEXT PROBLEM FUNCTION ---
   const moveToNextProblem = useCallback(() => {
@@ -445,18 +465,34 @@ const MathGame = () => {
   // --- ANSWER HANDLER for the weight puzzle ---
   const handleWeightAnswer = (value) => {
     if (value === weightProblem.answer) {
-      handleCorrectAnswer(); // <-- Use the new function here
+      setFilledWeightAnswer(value); // Fill in the answer
+      setPuzzleAnimation("animate-balance-correct"); // Trigger the animation
+      handleCorrectAnswer();
+
+      setTimeout(() => {
+        setPuzzleAnimation("");
+      }, 1000);
 
       const isGoalMet = (progress + 1) >= goal;
-      const transitionDelay = isGoalMet ? 4000 : 1200;
+      const transitionDelay = isGoalMet ? 4000 : 1500; // A slightly longer delay
 
       setTimeout(() => {
         setWeightProblem(generateWeightProblem(maxTotal));
+        setFilledWeightAnswer(null);
         setFeedback({ type: "", message: "" });
       }, transitionDelay);
     } else {
       handleIncorrectAnswer();
-      setPuzzleAnimation("animate-tip-wrong");
+      const totalLeft = weightProblem.leftSide.reduce((sum, item) => sum + item.weight, 0);
+      const totalRightKnown = weightProblem.rightSide.reduce((sum, item) => sum + item.weight, 0);
+
+      if ((totalRightKnown + value) > totalLeft) {
+        // User's guess made the right side too heavy
+        setPuzzleAnimation("animate-tip-right");
+      } else {
+        // User's guess made the right side too light
+        setPuzzleAnimation("animate-tip-left");
+      }
       setTimeout(() => setPuzzleAnimation(""), 500);
     }
   };
@@ -512,6 +548,9 @@ const MathGame = () => {
     setFilledOperator(null);
     setFilledPatternAnswer(null);
     setFilledLadderAnswers([]);
+    setFilledAnswer(null);
+    setFilledWeightAnswer(null);
+    setPuzzleAnimation("");
     setLadderStep(0);
     setFeedback({ type: "", message: "" });
   }, [maxTotal]);
@@ -560,6 +599,11 @@ const MathGame = () => {
         case 'numberBond':
           setFilledAnswer(value); // This assumes a single-stage bond for mixed mode
           break;
+        case 'weightPuzzle': 
+          setFilledWeightAnswer(value);
+          setPuzzleAnimation("animate-balance-correct");
+          setTimeout(() => setPuzzleAnimation(""), 1000); 
+          break;
       }
 
       const isGoalMet = (progress + 1) >= goal;
@@ -581,7 +625,14 @@ const MathGame = () => {
     } else {
       handleIncorrectAnswer();
       if (type === 'weightPuzzle') { // Trigger animation for this specific game
-        setPuzzleAnimation("animate-tip-wrong");
+        const totalLeft = data.leftSide.reduce((sum, item) => sum + item.weight, 0);
+        const totalRightKnown = data.rightSide.reduce((sum, item) => sum + item.weight, 0);
+
+        if ((totalRightKnown + value) > totalLeft) {
+          setPuzzleAnimation("animate-tip-right");
+        } else {
+          setPuzzleAnimation("animate-tip-left");
+        }
         setTimeout(() => setPuzzleAnimation(""), 500);
       }
     }
@@ -769,11 +820,15 @@ const MathGame = () => {
           <div>
             <h3 className="text-2xl font-bold text-gray-600 mb-4 text-center">Make the scale balance!</h3>
             <div className={puzzleAnimation}>
-              <WeightPuzzle problem={weightProblem} />
+              <WeightPuzzle 
+                problem={weightProblem} 
+                filledAnswer={filledWeightAnswer} 
+                animationClass={puzzleAnimation} 
+              />
             </div>
-            <NumberPad 
-              maxNumber={maxTotal} 
-              onNumberClick={handleWeightAnswer} 
+            <MultipleChoice
+              choices={weightPuzzleChoices}
+              onSelect={handleWeightAnswer}
               disabled={feedback.type === 'correct'}
             />
           </div>
@@ -862,8 +917,16 @@ const MathGame = () => {
                 return (
                   <div>
                     <h3 className="text-2xl font-bold text-gray-600 mb-4 text-center">Make the scale balance!</h3>
-                    <div className={puzzleAnimation}><WeightPuzzle problem={data} /></div>
-                    <NumberPad maxNumber={maxTotal} onNumberClick={handleMixedAnswer} disabled={feedback.type === 'correct'}/>
+                    <WeightPuzzle 
+                      problem={data} 
+                      filledAnswer={filledWeightAnswer} 
+                      animationClass={puzzleAnimation} 
+                    />
+                    <MultipleChoice
+                      choices={weightPuzzleChoices}
+                      onSelect={handleMixedAnswer}
+                      disabled={feedback.type === 'correct'}
+                    />
                   </div>
                 );
               case 'numberLadder':

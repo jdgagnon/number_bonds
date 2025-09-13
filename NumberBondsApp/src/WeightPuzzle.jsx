@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 
 // A reusable component for individual shapes
 const Shape = ({ color, shape, weight }) => {
@@ -25,10 +24,10 @@ const UnknownShape = ({ color, shape }) => {
   );
 };
 
-const WeightPuzzle = ({ problem }) => {
+// The main component now accepts 'filledAnswer'
+const WeightPuzzle = ({ problem, filledAnswer, animationClass }) => {
   const { leftSide, rightSide, unknownShape } = problem;
   
-  // Calculate total weights for display on the scale pans
   const totalLeftWeight = leftSide.reduce((sum, item) => sum + item.weight, 0);
   const totalRightWeight = rightSide.reduce((sum, item) => sum + item.weight, 0);
 
@@ -43,17 +42,22 @@ const WeightPuzzle = ({ problem }) => {
           ))}
         </div>
         
-        {/* Right Side Shapes (including the unknown) */}
+        {/* Right Side Shapes (conditionally render solved state) */}
         <div className="flex gap-3">
           {rightSide.map((item, index) => (
             <Shape key={`right-${index}`} {...item} />
           ))}
-          <UnknownShape {...unknownShape} />
+          {/* If the answer is filled, show the solved shape. Otherwise, show the question mark. */}
+          {filledAnswer !== null ? (
+            <Shape {...unknownShape} weight={filledAnswer} />
+          ) : (
+            <UnknownShape {...unknownShape} />
+          )}
         </div>
       </div>
 
       {/* --- Scale Graphic --- */}
-      <div className="relative w-full max-w-xs mb-16">
+      <div className={`relative w-full max-w-xs mb-16 ${animationClass}`}>
         {/* Scale Beam */}
         <div className="h-2 bg-gray-500 rounded-full"></div>
         
@@ -62,10 +66,12 @@ const WeightPuzzle = ({ problem }) => {
           <span className="text-2xl font-bold text-sky-800">{totalLeftWeight}</span>
         </div>
         
-        {/* Right Pan */}
+        {/* Right Pan (conditionally render solved state) */}
         <div className="absolute bottom-[-50px] right-[-20px] w-24 h-12 bg-amber-200 border-4 border-amber-400 rounded-lg flex justify-center items-center">
-           {/* Display the known total + a question mark */}
-          <span className="text-2xl font-bold text-amber-800">{totalRightWeight} + ?</span>
+          <span className="text-2xl font-bold text-amber-800">
+            {/* If the answer is filled, show the final total. Otherwise, show the equation. */}
+            {filledAnswer !== null ? totalLeftWeight : `${totalRightWeight} + ?`}
+          </span>
         </div>
         
         {/* Fulcrum */}
