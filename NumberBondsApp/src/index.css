@@ -70,6 +70,7 @@ body {
   --sparkle-y-end: 2px;
   animation-delay: var(--sparkle-delay); /* Individual delays for each spark */
 }
+
 @keyframes spin {
   from {
     transform: rotate(0deg);
@@ -83,23 +84,28 @@ body {
   animation: spin 3s linear infinite;
 }
 
-/* Animation for the unicorn's "dance" (bobbing up and down) */
-@keyframes dance {
-  0%, 100% {
-    transform: translateY(0) rotate(-2deg);
+@keyframes shoot-across {
+  from {
+    /* Start just off-screen to the left */
+    transform: translateX(-700%) rotate(0deg);
   }
-  50% {
-    transform: translateY(-10px) rotate(2deg);
+  to {
+    /* End just off-screen to the right */
+    transform: translateX(700%) rotate(1080deg);
   }
 }
 
-/* Animation for moving the unicorn across the screen */
-@keyframes cross-screen {
-  0% {
-    transform: translateX(-150px); /* Start off-screen to the left */
+.animate-shooting-star {
+  /* Use 'linear' timing for a constant, seamless speed */
+  animation: shoot-across 6s linear infinite;
+}
+
+@keyframes dance {
+  0%, 100% {
+    transform: translateY(0) rotate(-3deg);
   }
-  100% {
-    transform: translateX(100vw); /* End off-screen to the right */
+  50% {
+    transform: translateY(-8px) rotate(3deg);
   }
 }
 
@@ -107,12 +113,15 @@ body {
   animation: dance 0.8s infinite ease-in-out;
 }
 
-.animate-cross-screen {
-  position: fixed; /* Use fixed positioning to float over everything */
-  top: 150px;   /* Appears near the bottom of the screen */
-  left: 0;
-  animation: cross-screen 8s linear infinite; /* 8 seconds to cross */
-  z-index: 100; /* Ensure it's on top */
+@keyframes sparkle-radiate {
+  0% {
+    opacity: 1;
+    transform: scale(0.5) translate(0, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1) translate(var(--sparkle-end-x), var(--sparkle-end-y));
+  }
 }
 
 /* Add the sparkle fade-out animation */

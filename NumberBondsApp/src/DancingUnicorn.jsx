@@ -1,60 +1,46 @@
-import React, { useState, useEffect, useRef } from "react";
-import Sparkle from './Sparkle'; // Import the Sparkle component
+import React, { useState, useEffect } from "react";
+import Sparkle from './Sparkle';
 
 const DancingUnicorn = () => {
-  const unicornRef = useRef(null); // Ref to get unicorn's position
   const [sparkles, setSparkles] = useState([]);
-  const [unicornX, setUnicornX] = useState(0);
-  const [unicornY, setUnicornY] = useState(0);
 
-  // Effect to update unicorn's position and spawn sparkles
   useEffect(() => {
-  const updatePosition = () => {
-    if (unicornRef.current) {
-      const rect = unicornRef.current.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
+    const spawnSparkle = () => {
+      const newSparkle = {
+        id: Date.now(),
+        delay: Math.random() * 0.5, // Random delay up to 0.5s
+        // Random end position in a circular pattern
+        endX: (Math.random() - 0.5) * 100,
+        endY: (Math.random() - 0.5) * 100,
+      };
 
-      // Create three new sparkles for a multi-stranded trail
-      const newSparkles = [
-        { id: Date.now() + 1, x: centerX + (Math.random() * 20 - 10), y: centerY + (Math.random() * 20 - 10) },
-        { id: Date.now() + 2, x: centerX + (Math.random() * 20 - 10), y: centerY + (Math.random() * 20 - 10) },
-        { id: Date.now() + 3, x: centerX + (Math.random() * 20 - 10), y: centerY + (Math.random() * 20 - 10) },
-      ];
+      // Correctly add the new sparkle and clean up old ones
+      setSparkles(prevSparkles => [
+        ...prevSparkles.filter(s => Date.now() - s.id < 1000), // Keep sparkles for 1 second
+        newSparkle
+      ]);
+    };
 
-      // Add the new sparkles to the existing array
-      setSparkles(prevSparkles => [...prevSparkles, ...newSparkles]);
-      
-      // Clean up old sparkles to prevent performance issues
-      setSparkles(prevSparkles => prevSparkles.filter(s => Date.now() - s.id < 2000));
-    }
-  };
-
-  // Keep the interval the same, but now it spawns 3 sparkles each time
-  const interval = setInterval(updatePosition, 50);
-  return () => clearInterval(interval);
-}, []); // Empty dependency array means this runs once on mount
+    const interval = setInterval(spawnSparkle, 100); // Spawn a sparkle every 100ms
+    return () => clearInterval(interval);
+  }, []);
 
   return (
-    // The main container for the unicorn and its sparkles
-    <div className="fixed inset-0 pointer-events-none z-20 overflow-hidden">
+    // This container is now relative, so it stays within its parent (the star slot)
+    <div className="relative w-[50px] h-[50px] flex items-center justify-center">
+      
       {/* Render all active sparkles */}
       {sparkles.map(s => (
-        <Sparkle key={s.id} x={s.x} y={s.y} />
+        <Sparkle key={s.id} delay={s.delay} endX={s.endX} endY={s.endY} />
       ))}
 
-      {/* This container handles the animation across the screen */}
-      <div className="animate-cross-screen" ref={unicornRef}>
-        {/* This container handles the dancing animation */}
-        <div className="animate-dance">
-          <img
-            src="/unicorn.png"
-            alt="A dancing unicorn"
-            width="100"
-            height="100"
-            className="transform scale-x-[-1]"
-          />
-        </div>
+      {/* This container handles the dancing animation */}
+      <div className="animate-dance">
+        <img
+          src="/unicorn.png"
+          alt="A dancing unicorn"
+          className="w-full h-full"
+        />
       </div>
     </div>
   );

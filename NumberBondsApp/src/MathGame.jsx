@@ -10,11 +10,9 @@ import OperatorButtons from './OperatorButtons';
 import CubeDisplay from './CubeDisplay';
 import MultipleChoice from './MultipleChoice';
 import Feedback from './Feedback';
-import DancingUnicorn from './DancingUnicorn'; 
 import WeightPuzzle from './WeightPuzzle';
 import NumberLadder from './NumberLadder';
 import ShapePuzzle from './ShapePuzzle';
-import { useIdleTimer } from './useIdleTimer';
 import ProgressReport from './ProgressReport';
 
 // --- Helper Functions ---
@@ -689,7 +687,6 @@ const MathGame = () => {
   const problemKey = `${problem.part1}-${problem.part2}-${currentSentenceIdx}`;
   const activeSentence = sentences[currentSentenceIdx];
   const [partBefore, partAfter] = activeSentence.text.split('?');
-  const isMasteryLevel = starLevel >= 10;
 
   return (
     <div className="flex flex-col justify-center items-center min-h-screen bg-blue-50 font-sans p-4 overflow-x-hidden">
@@ -731,9 +728,6 @@ const MathGame = () => {
           </div>
         </div>
       </div>
-      
-      {/* Conditionally render the unicorn when mastery level is reached */}
-      {/* {isMasteryLevel && <DancingUnicorn />} */}
 
       {/* --- Star Tracker and Progress Bar --- */}
       <div className="w-full max-w-sm mb-4">
