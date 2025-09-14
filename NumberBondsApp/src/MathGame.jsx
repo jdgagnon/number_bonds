@@ -212,7 +212,141 @@ const generateShapeProblem = () => {
         // Roof (not a rectangle, distractor)
         { type: 'polygon', points: "10,70 130,70 70,20", className: "fill-red-500 stroke-red-700 stroke-2" },
       ]
-    }
+    },
+    // 1. Fish
+    {
+      question: "How many triangles are in the fish?",
+      answer: 3,
+      width: 150,
+      height: 100,
+      shapes: [
+        { type: 'rect', x: 10, y: 30, width: 100, height: 40, className: "fill-orange-400 stroke-orange-600 stroke-2" },
+        { type: 'polygon', points: "110,50 140,20 140,80", className: "fill-orange-500 stroke-orange-700 stroke-2" }, // Tail
+        { type: 'polygon', points: "40,30 60,10 80,30", className: "fill-orange-500 stroke-orange-700 stroke-2" }, // Top Fin
+        { type: 'polygon', points: "40,70 60,90 80,70", className: "fill-orange-500 stroke-orange-700 stroke-2" }, // Bottom Fin
+        { type: 'rect', x: 25, y: 45, width: 8, height: 8, className: "fill-black" }, // Eye
+      ],
+    },
+    // 2. Sailboat
+    {
+      question: "How many triangles are in the sailboat?",
+      answer: 2,
+      width: 150,
+      height: 150,
+      shapes: [
+        { type: 'polygon', points: "10,100 140,100 120,130 30,130", className: "fill-amber-800 stroke-amber-900 stroke-2" }, // Hull
+        { type: 'rect', x: 70, y: 10, width: 10, height: 90, className: "fill-amber-900" }, // Mast
+        { type: 'polygon', points: "85,15 135,95 85,95", className: "fill-white stroke-gray-400 stroke-2" }, // Main Sail
+        { type: 'polygon', points: "65,15 20,95 65,95", className: "fill-gray-200 stroke-gray-400 stroke-2" }, // Jib Sail
+      ],
+    },
+    // 3. Christmas Tree
+    {
+      question: "How many triangles are in the tree?",
+      answer: 3,
+      width: 120,
+      height: 160,
+      shapes: [
+        { type: 'rect', x: 50, y: 130, width: 20, height: 30, className: "fill-amber-800" }, // Trunk
+        { type: 'polygon', points: "60,80 10,140 110,140", className: "fill-green-600 stroke-green-800 stroke-2" }, // Bottom Layer
+        { type: 'polygon', points: "60,50 20,110 100,110", className: "fill-green-500 stroke-green-700 stroke-2" }, // Middle Layer
+        { type: 'polygon', points: "60,20 30,80 90,80", className: "fill-green-400 stroke-green-600 stroke-2" }, // Top Layer
+      ],
+    },
+    // 4. Train Engine
+    {
+      question: "How many rectangles are in the train?",
+      answer: 6,
+      width: 200,
+      height: 130,
+      shapes: [
+        { type: 'rect', x: 10, y: 50, width: 120, height: 40, className: "fill-red-500 stroke-red-700 stroke-2" }, // Main Body
+        { type: 'rect', x: 130, y: 20, width: 50, height: 70, className: "fill-blue-500 stroke-blue-700 stroke-2" }, // Cab
+        { type: 'rect', x: 30, y: 20, width: 20, height: 30, className: "fill-gray-500 stroke-gray-700 stroke-2" }, // Chimney
+        { type: 'rect', x: 145, y: 30, width: 20, height: 20, className: "fill-cyan-200" }, // Window
+        { type: 'rect', x: 20, y: 90, width: 30, height: 30, className: "fill-black" }, // Wheel 1
+        { type: 'rect', x: 90, y: 90, width: 30, height: 30, className: "fill-black" }, // Wheel 2
+      ],
+    },
+    // 5. Castle Turret
+    {
+      question: "How many rectangles are in the turret?",
+      answer: 4,
+      width: 100,
+      height: 180,
+      shapes: [
+        { type: 'polygon', points: "50,0 10,30 90,30", className: "fill-red-500 stroke-red-700 stroke-2" }, // Roof
+        { type: 'rect', x: 20, y: 30, width: 15, height: 20, className: "fill-gray-400 stroke-gray-600 stroke-2" }, // Battlement 1
+        { type: 'rect', x: 42, y: 30, width: 15, height: 20, className: "fill-gray-400 stroke-gray-600 stroke-2" }, // Battlement 2
+        { type: 'rect', x: 65, y: 30, width: 15, height: 20, className: "fill-gray-400 stroke-gray-600 stroke-2" }, // Battlement 3
+        { type: 'rect', x: 20, y: 50, width: 60, height: 130, className: "fill-gray-500 stroke-gray-700 stroke-2" }, // Main Tower
+      ],
+    },
+    // 6. Arrow
+    {
+      question: "How many triangles are in the arrow?",
+      answer: 1,
+      width: 180,
+      height: 80,
+      shapes: [
+        { type: 'rect', x: 0, y: 30, width: 150, height: 20, className: "fill-amber-800 stroke-amber-900 stroke-2" }, // Shaft
+        { type: 'polygon', points: "140,10 180,40 140,70", className: "fill-red-500 stroke-red-700 stroke-2" }, // Head
+      ],
+    },
+    // 7. Simple Car
+    {
+      question: "How many rectangles are in the car?",
+      answer: 5,
+      width: 180,
+      height: 110,
+      shapes: [
+        { type: 'rect', x: 0, y: 50, width: 180, height: 30, className: "fill-blue-500 stroke-blue-700 stroke-2" }, // Body
+        { type: 'rect', x: 40, y: 20, width: 100, height: 30, className: "fill-blue-400 stroke-blue-600 stroke-2" }, // Top
+        { type: 'rect', x: 50, y: 25, width: 80, height: 20, className: "fill-cyan-200" }, // Window
+        { type: 'rect', x: 30, y: 80, width: 30, height: 30, className: "fill-black" }, // Wheel 1
+        { type: 'rect', x: 120, y: 80, width: 30, height: 30, className: "fill-black" }, // Wheel 2
+      ],
+    },
+    // 8. Kite
+    {
+      question: "How many triangles are in the kite?",
+      answer: 4,
+      width: 100,
+      height: 180,
+      shapes: [
+        { type: 'polygon', points: "50,0 0,50 100,50", className: "fill-fuchsia-400 stroke-fuchsia-600 stroke-2" }, // Top half
+        { type: 'polygon', points: "50,120 0,50 100,50", className: "fill-cyan-400 stroke-cyan-600 stroke-2" }, // Bottom half
+        { type: 'rect', x: 49, y: 120, width: 2, height: 60, className: "fill-gray-400" }, // String
+        { type: 'polygon', points: "40,140 50,130 60,140", className: "fill-red-500" }, // Bow 1
+        { type: 'polygon', points: "40,160 50,150 60,160", className: "fill-red-500" }, // Bow 2
+      ],
+    },
+    // 9. Pencil
+    {
+      question: "How many triangles are in the pencil?",
+      answer: 1,
+      width: 40,
+      height: 200,
+      shapes: [
+        { type: 'rect', x: 10, y: 30, width: 20, height: 130, className: "fill-yellow-300 stroke-yellow-500 stroke-2" }, // Body
+        { type: 'rect', x: 10, y: 160, width: 20, height: 20, className: "fill-pink-400 stroke-pink-600 stroke-2" }, // Eraser
+        { type: 'rect', x: 8, y: 155, width: 24, height: 10, className: "fill-gray-400 stroke-gray-600 stroke-2" }, // Band
+        { type: 'polygon', points: "10,30 30,30 25,10 15,10", className: "fill-orange-200 stroke-orange-400 stroke-2" }, // Wood Tip
+        { type: 'polygon', points: "20,0 15,10 25,10", className: "fill-black" }, // Graphite Tip
+      ],
+    },
+    // 10. Ice Cream Cone
+    {
+      question: "How many triangles are in the ice cream cone?",
+      answer: 1,
+      width: 80,
+      height: 150,
+      shapes: [
+        { type: 'polygon', points: "40,150 10,50 70,50", className: "fill-orange-300 stroke-orange-500 stroke-2" }, // Cone
+        { type: 'rect', x: 20, y: 20, width: 40, height: 40, className: "fill-pink-400 stroke-pink-600 stroke-2" }, // Ice cream scoop 1
+        { type: 'rect', x: 30, y: 0, width: 20, height: 20, className: "fill-red-500 stroke-red-700 stroke-2" }, // Cherry
+      ],
+    },
   ];
   // Return a random puzzle from the list
   return puzzles[Math.floor(Math.random() * puzzles.length)];
