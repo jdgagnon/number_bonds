@@ -237,6 +237,8 @@ const updateStats = (gameType, isCorrect) => {
 
   // 4. Save the updated stats back to localStorage
   localStorage.setItem('mathGameStats', JSON.stringify(stats));
+
+  return stats[gameType];
 };
 
 // --- CONSTANTS ---
@@ -250,6 +252,7 @@ const MathGame = () => {
   const [patternProblem, setPatternProblem] = useState(() => generatePatternProblem(20));
   const [filledPatternAnswer, setFilledPatternAnswer] = useState(null);
   const [comparisonProblem, setComparisonProblem] = useState(() => generateComparisonProblem(10));
+  const [isComparisonHard, setIsComparisonHard] = useState(false);
   const [filledOperator, setFilledOperator] = useState(null);
   const [weightProblem, setWeightProblem] = useState(() => generateWeightProblem(10));
   const [filledWeightAnswer, setFilledWeightAnswer] = useState(null);
@@ -472,7 +475,10 @@ const MathGame = () => {
   // --- ANSWER HANDLER for the comparison game ---
   const handleComparisonAnswer = (op) => {
     const isCorrect = op === comparisonProblem.answer;
-    updateStats('comparison', isCorrect);
+    const updatedStats = updateStats('comparison', isCorrect);
+    if (updatedStats.correct >= 25) {
+      setIsComparisonHard(true);
+    }
     if (op === comparisonProblem.answer) {
       const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
       setFeedback({ type: "correct", message: `✅ ${randomMessage}` });
@@ -629,10 +635,13 @@ const MathGame = () => {
     }
 
     const isCorrect = value === correctAnswer;
-    updateStats(type, isCorrect);
+    const updatedStats = updateStats(type, isCorrect);
     
     // Check the answer and proceed
     if (value === correctAnswer) {
+      if (type === 'comparison' && updatedStats.correct >= 25) {
+        setIsComparisonHard(true);
+      }
       handleCorrectAnswer(); // This properly awards points/confetti
       
       switch(type) {
@@ -693,7 +702,14 @@ const MathGame = () => {
       {/* Conditionally render the Progress Report Modal */}
       {showReport && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <ProgressReport onClose={() => setShowReport(false)} />
+          <ProgressReport 
+            onClose={() => setShowReport(false)} 
+            onClear={() => setIsComparisonHard(false)}
+            stars={stars}
+            setStars={setStars}
+            starLevel={starLevel}
+            setStarLevel={setStarLevel}
+            />
         </div>
       )}
       {/* --- Game Mode Switcher --- */}
@@ -813,7 +829,10 @@ const MathGame = () => {
             <div className="flex justify-around items-center text-center">
               {/* Left Side */}
               <div className="w-1/3">
-                <CubeDisplay count={comparisonProblem.num1} color="bg-sky-400" />
+                {/* Conditionally render the cubes */}
+                {(!isComparisonHard || filledOperator !== null) && (
+                  <CubeDisplay count={comparisonProblem.num1} color="bg-sky-400" />
+                )}
                 <div className="text-6xl font-bold text-gray-700">{comparisonProblem.num1}</div>
               </div>
               
@@ -828,7 +847,10 @@ const MathGame = () => {
 
               {/* Right Side */}
               <div className="w-1/3">
-                <CubeDisplay count={comparisonProblem.num2} color="bg-amber-400" />
+                {/* Conditionally render the cubes */}
+                {(!isComparisonHard || filledOperator !== null) && (
+                  <CubeDisplay count={comparisonProblem.num2} color="bg-amber-400" />
+                )}
                 <div className="text-6xl font-bold text-gray-700">{comparisonProblem.num2}</div>
               </div>
             </div>
@@ -920,10 +942,16 @@ const MathGame = () => {
                 return (
                   <div>
                     <div className="flex justify-around items-center text-center">
+                      {/* Left Side */}
                       <div className="w-1/3">
-                        <CubeDisplay count={data.num1} color="bg-sky-400" />
+                        {/* Conditionally render the cubes */}
+                        {(!isComparisonHard || filledOperator !== null) && (
+                          <CubeDisplay count={data.num1} color="bg-sky-400" />
+                        )}
                         <div className="text-6xl font-bold text-gray-700">{data.num1}</div>
                       </div>
+                      
+                      {/* Middle Operator (remains the same) */}
                       <div className="w-1/3 flex justify-center items-center h-24">
                         {filledOperator ? (
                           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-6xl font-bold text-purple-600">{filledOperator}</motion.div>
@@ -931,8 +959,13 @@ const MathGame = () => {
                           <div className="w-20 h-20 border-4 border-dashed border-gray-300 rounded-full"></div>
                         )}
                       </div>
+
+                      {/* Right Side */}
                       <div className="w-1/3">
-                        <CubeDisplay count={data.num2} color="bg-amber-400" />
+                        {/* Conditionally render the cubes */}
+                        {(!isComparisonHard || filledOperator !== null) && (
+                          <CubeDisplay count={data.num2} color="bg-amber-400" />
+                        )}
                         <div className="text-6xl font-bold text-gray-700">{data.num2}</div>
                       </div>
                     </div>
