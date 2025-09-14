@@ -701,7 +701,7 @@ const MathGame = () => {
     <div className="flex flex-col justify-center items-center min-h-screen bg-blue-50 font-sans p-4 overflow-x-hidden">
       {/* Conditionally render the Progress Report Modal */}
       {showReport && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4 overflow-y-auto">
           <ProgressReport 
             onClose={() => setShowReport(false)} 
             onClear={() => setIsComparisonHard(false)}
@@ -709,7 +709,7 @@ const MathGame = () => {
             setStars={setStars}
             starLevel={starLevel}
             setStarLevel={setStarLevel}
-            />
+          />
         </div>
       )}
       {/* --- Game Mode Switcher --- */}
