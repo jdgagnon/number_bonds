@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Confetti from "react-confetti";
 import { motion } from "framer-motion";
 import NumberBond from "./NumberBond";
@@ -220,18 +220,17 @@ const generateShapeProblem = () => {
   return puzzles[Math.floor(Math.random() * puzzles.length)];
 };
 
-const updateStats = (gameType, isCorrect, timeSpent) => {
+const updateStats = (gameType, isCorrect) => {
   // 1. Get existing stats from localStorage or create a new object
   const stats = JSON.parse(localStorage.getItem('mathGameStats')) || {};
 
   // 2. Ensure the gameType entry exists
   if (!stats[gameType]) {
-    stats[gameType] = { correct: 0, incorrect: 0, totalTime: 0, totalAttempts: 0 };
+    stats[gameType] = { correct: 0, incorrect: 0, totalAttempts: 0 };
   }
 
   // 3. Update the stats
   stats[gameType].totalAttempts += 1;
-  stats[gameType].totalTime += timeSpent;
   if (isCorrect) {
     stats[gameType].correct += 1;
   } else {
@@ -290,46 +289,6 @@ const MathGame = () => {
     const savedLevel = localStorage.getItem('mathGameStarLevel');
     return savedLevel !== null ? JSON.parse(savedLevel) : 0;
   });
-  const [problemStartTime, setProblemStartTime] = useState(Date.now());
-
-  // Define what happens when the user goes idle
-  const handleIdle = useCallback(() => {
-    console.log("User is idle. Pausing timer by resetting the question.");
-    // Simply reset the start time to now. The elapsed time will be 0.
-    setProblemStartTime(Date.now()); 
-    // You could also show a "Paused" modal here
-  }, []);
-
-  // Activate the idle timer
-  useIdleTimer(handleIdle, 60000); // Set to 60 seconds
-
-  // Use a ref to store the time when the page was hidden
-  const timeHiddenRef = useRef(null);
-
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        // Page is now hidden, so record the current time
-        timeHiddenRef.current = Date.now();
-      } else {
-        // Page is now visible again. Calculate the idle time.
-        if (timeHiddenRef.current) {
-          const idleTime = Date.now() - timeHiddenRef.current;
-          // Add the idle time to the start time to effectively "pause" the timer
-          setProblemStartTime(prevStartTime => prevStartTime + idleTime);
-          timeHiddenRef.current = null; // Clear the ref
-        }
-      }
-    };
-
-    // Add the event listener when the component mounts
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    // Remove the event listener when the component unmounts
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, []); // Empty dependency array ensures this runs only once
 
   useEffect(() => {
     localStorage.setItem('mathGameStars', JSON.stringify(stars));
@@ -390,11 +349,6 @@ const MathGame = () => {
     // FIX: Make the dependency array more stable
   }, [gameMode, weightProblem, mixedProblem.data?.answer, maxTotal]);
 
-  useEffect(() => {
-    // Reset the timer whenever the game mode or a new problem is loaded
-    setProblemStartTime(Date.now());
-  }, [gameMode, problem, comparisonProblem, patternProblem, weightProblem, ladderProblem, shapeProblem, mixedProblem]);
-
   // --- NEXT PROBLEM FUNCTION ---
   const moveToNextProblem = useCallback(() => {
     const newProblem = generateProblem(maxTotal);
@@ -454,20 +408,15 @@ const MathGame = () => {
 
   // -- ANSWER HANDLER FOR NUMBER BOND AND NUMBER SENTENCES ---
   const handleAnswer = (value) => {
-    // 1. Determine the correct answer first based on the game stage.
     let correctAnswer;
     if (stage === "bond") {
       correctAnswer = problem.blank === "whole" ? problem.whole : problem.blank === "left" ? problem.part1 : problem.part2;
     } else {
       correctAnswer = sentences[currentSentenceIdx].answer;
     }
-
-    // 2. Now calculate stats using the correct variables.
-    const timeSpent = (Date.now() - problemStartTime) / 1000;
     const isCorrect = value === correctAnswer;
-    updateStats('numberBond', isCorrect, timeSpent); // Use 'numberBond' for consistency
+    updateStats('numberBond', isCorrect); // Use 'numberBond' for consistency
 
-    // 3. Proceed with the original logic.
     if (isCorrect) {
       const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
       setFeedback({ type: "correct", message: `✅ ${randomMessage}` });
@@ -500,9 +449,8 @@ const MathGame = () => {
 
   // --- ANSWER HANDLER for the pattern game ---
   const handlePatternAnswer = (choice) => {
-    const timeSpent = (Date.now() - problemStartTime) / 1000; // Time in seconds
     const isCorrect = choice === patternProblem.answer;
-    updateStats('pattern', isCorrect, timeSpent);
+    updateStats('pattern', isCorrect);
 
     if (isCorrect) {
       const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
@@ -525,9 +473,8 @@ const MathGame = () => {
   
   // --- ANSWER HANDLER for the comparison game ---
   const handleComparisonAnswer = (op) => {
-    const timeSpent = (Date.now() - problemStartTime) / 1000; // Time in seconds
     const isCorrect = op === comparisonProblem.answer;
-    updateStats('comparison', isCorrect, timeSpent);
+    updateStats('comparison', isCorrect);
     if (op === comparisonProblem.answer) {
       const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
       setFeedback({ type: "correct", message: `✅ ${randomMessage}` });
@@ -550,9 +497,8 @@ const MathGame = () => {
 
   // --- ANSWER HANDLER for the weight puzzle ---
   const handleWeightAnswer = (value) => {
-    const timeSpent = (Date.now() - problemStartTime) / 1000; // Time in seconds
     const isCorrect = value === weightProblem.answer;
-    updateStats('weight', isCorrect, timeSpent);
+    updateStats('weight', isCorrect);
     if (value === weightProblem.answer) {
       setFilledWeightAnswer(value); // Fill in the answer
       setPuzzleAnimation("animate-balance-correct"); // Trigger the animation
@@ -588,15 +534,19 @@ const MathGame = () => {
 
   // --- ANSWER HANDLER for the number ladder ---
   const handleLadderAnswer = (value) => {
-    const timeSpent = (Date.now() - problemStartTime) / 1000; // Time in seconds
-    const isCorrect = value === ladderProblem.answer;
-    updateStats('numberLadder', isCorrect, timeSpent);
-    if (value === ladderProblem.answers[ladderStep]) {
+    // 1. Determine correctness ONCE using the correct logic for the current step.
+    const isCorrect = value === ladderProblem.answers[ladderStep];
+    
+    // 2. Update stats with the correct result.
+    updateStats('numberLadder', isCorrect);
+
+    // 3. Use the 'isCorrect' variable to proceed with the rest of the logic.
+    if (isCorrect) {
       const newAnswers = [...filledLadderAnswers, value];
       setFilledLadderAnswers(newAnswers);
       
       if (ladderStep === ladderProblem.answers.length - 1) {
-        handleCorrectAnswer(); // <-- Use the new function here
+        handleCorrectAnswer();
 
         const isGoalMet = (progress + 1) >= goal;
         const transitionDelay = isGoalMet ? 4000 : 1200;
@@ -610,7 +560,7 @@ const MathGame = () => {
       } else {
         awardPoint();
         setLadderStep(prevStep => prevStep + 1);
-        setFeedback({ type: "", message: "" }); // Clear feedback for next step
+        setFeedback({ type: "", message: "" });
       }
     } else {
       handleIncorrectAnswer();
@@ -619,9 +569,8 @@ const MathGame = () => {
 
   // --- ANSWER HANDLER for the shape puzzle ---
   const handleShapeAnswer = (value) => {
-    const timeSpent = (Date.now() - problemStartTime) / 1000; // Time in seconds
     const isCorrect = value === shapeProblem.answer;
-    updateStats('shape', isCorrect, timeSpent);
+    updateStats('shape', isCorrect);
     if (value === shapeProblem.answer) {
       handleCorrectAnswer(); // <-- Use the new function here
 
@@ -637,7 +586,7 @@ const MathGame = () => {
     }
   };
 
-  // NEW: Add a function to advance to the next mixed problem
+  // Function to advance to the next mixed problem
   const moveToNextMixedProblem = useCallback(() => {
     setMixedProblem(generateRandomProblem(maxTotal));
     // Reset any game-specific states if necessary
@@ -651,7 +600,7 @@ const MathGame = () => {
     setFeedback({ type: "", message: "" });
   }, [maxTotal]);
 
-  // NEW: Create a universal answer handler for the mixed mode
+  // Universal answer handler for the mixed mode
   const handleMixedAnswer = (value) => {
     const { type, data } = mixedProblem;
     let correctAnswer;
@@ -681,9 +630,8 @@ const MathGame = () => {
         return;
     }
 
-    const timeSpent = (Date.now() - problemStartTime) / 1000; // Time in seconds
     const isCorrect = value === correctAnswer;
-    updateStats(type, isCorrect, timeSpent);
+    updateStats(type, isCorrect);
     
     // Check the answer and proceed
     if (value === correctAnswer) {

@@ -42,7 +42,6 @@ const ProgressReport = ({ onClose }) => {
       <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
         {Object.entries(stats).map(([gameType, data]) => {
           const percentCorrect = data.totalAttempts > 0 ? ((data.correct / data.totalAttempts) * 100).toFixed(0) : 0;
-          const avgTime = data.totalAttempts > 0 ? (data.totalTime / data.totalAttempts).toFixed(1) : 0;
 
           return (
             <div key={gameType} className="p-4 bg-gray-50 rounded-md border border-gray-200">
@@ -50,10 +49,6 @@ const ProgressReport = ({ onClose }) => {
               <div className="flex justify-between items-center mt-2">
                 <span className="text-gray-600">Correctness:</span>
                 <span className="font-semibold text-green-600">{percentCorrect}%</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Avg. Time:</span>
-                <span className="font-semibold text-blue-600">{avgTime}s</span>
               </div>
                <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-500">Total Attempts:</span>
