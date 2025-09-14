@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Confetti from "react-confetti";
 import { motion } from "framer-motion";
 import NumberBond from "./NumberBond";
@@ -14,6 +14,8 @@ import DancingUnicorn from './DancingUnicorn';
 import WeightPuzzle from './WeightPuzzle';
 import NumberLadder from './NumberLadder';
 import ShapePuzzle from './ShapePuzzle';
+import { useIdleTimer } from './useIdleTimer';
+import ProgressReport from './ProgressReport';
 
 // --- Helper Functions ---
 const GAME_TYPES = ['numberBond', 'comparison', 'pattern', 'weightPuzzle', 'numberLadder', 'shapePuzzle'];
@@ -148,10 +150,10 @@ const generateWeightProblem = (max) => {
 
 const generateLadderProblem = (max) => {
   const operations = [
-    { text: 'Add 2', operation: (n) => n + 2 },
-    { text: 'Subtract 3', operation: (n) => n - 3, requires: 3 }, // requires: n >= 3
-    { text: 'Add 5', operation: (n) => n + 5 },
-    { text: 'Add 10', operation: (n) => n + 10 },
+    { text: '+ 2', operation: (n) => n + 2 },
+    { text: '- 3', operation: (n) => n - 3, requires: 3 }, // requires: n >= 3
+    { text: '+ 5', operation: (n) => n + 5 },
+    { text: '+ 10', operation: (n) => n + 10 },
   ];
   
   // Start with a higher number to give subtraction a chance
@@ -218,11 +220,34 @@ const generateShapeProblem = () => {
   return puzzles[Math.floor(Math.random() * puzzles.length)];
 };
 
+const updateStats = (gameType, isCorrect, timeSpent) => {
+  // 1. Get existing stats from localStorage or create a new object
+  const stats = JSON.parse(localStorage.getItem('mathGameStats')) || {};
+
+  // 2. Ensure the gameType entry exists
+  if (!stats[gameType]) {
+    stats[gameType] = { correct: 0, incorrect: 0, totalTime: 0, totalAttempts: 0 };
+  }
+
+  // 3. Update the stats
+  stats[gameType].totalAttempts += 1;
+  stats[gameType].totalTime += timeSpent;
+  if (isCorrect) {
+    stats[gameType].correct += 1;
+  } else {
+    stats[gameType].incorrect += 1;
+  }
+
+  // 4. Save the updated stats back to localStorage
+  localStorage.setItem('mathGameStats', JSON.stringify(stats));
+};
+
 // --- CONSTANTS ---
 const CORRECT_MESSAGES = ["Awesome!", "You got it!", "Super!", "Brilliant!", "Fantastic!"];
 
 // --- Main Component ---
 const MathGame = () => {
+  const [showReport, setShowReport] = useState(false);
   const [maxTotal, setMaxTotal] = useState(10);
   const [gameMode, setGameMode] = useState('numberBond'); // 'numberBond', 'comparison', or 'pattern'
   const [patternProblem, setPatternProblem] = useState(() => generatePatternProblem(20));
@@ -237,6 +262,7 @@ const MathGame = () => {
   const [filledLadderAnswers, setFilledLadderAnswers] = useState([]);
   const [ladderChoices, setLadderChoices] = useState([]);
   const [weightPuzzleChoices, setWeightPuzzleChoices] = useState([]);
+  const [mixedBondChoices, setMixedBondChoices] = useState([]);
   const [shapeProblem, setShapeProblem] = useState(() => generateShapeProblem());
   const [mixedProblem, setMixedProblem] = useState(() => generateRandomProblem(maxTotal));
   const [problem, setProblem] = useState(() => generateProblem(maxTotal));
@@ -264,7 +290,46 @@ const MathGame = () => {
     const savedLevel = localStorage.getItem('mathGameStarLevel');
     return savedLevel !== null ? JSON.parse(savedLevel) : 0;
   });
-  
+  const [problemStartTime, setProblemStartTime] = useState(Date.now());
+
+  // Define what happens when the user goes idle
+  const handleIdle = useCallback(() => {
+    console.log("User is idle. Pausing timer by resetting the question.");
+    // Simply reset the start time to now. The elapsed time will be 0.
+    setProblemStartTime(Date.now()); 
+    // You could also show a "Paused" modal here
+  }, []);
+
+  // Activate the idle timer
+  useIdleTimer(handleIdle, 60000); // Set to 60 seconds
+
+  // Use a ref to store the time when the page was hidden
+  const timeHiddenRef = useRef(null);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Page is now hidden, so record the current time
+        timeHiddenRef.current = Date.now();
+      } else {
+        // Page is now visible again. Calculate the idle time.
+        if (timeHiddenRef.current) {
+          const idleTime = Date.now() - timeHiddenRef.current;
+          // Add the idle time to the start time to effectively "pause" the timer
+          setProblemStartTime(prevStartTime => prevStartTime + idleTime);
+          timeHiddenRef.current = null; // Clear the ref
+        }
+      }
+    };
+
+    // Add the event listener when the component mounts
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // Remove the event listener when the component unmounts
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []); // Empty dependency array ensures this runs only once
 
   useEffect(() => {
     localStorage.setItem('mathGameStars', JSON.stringify(stars));
@@ -287,43 +352,48 @@ const MathGame = () => {
     setNumberBondChoices(generateBondChoices(correctAnswer, maxTotal));
   }, [problem, stage, currentSentenceIdx, gameMode, sentences, maxTotal]);
 
+  // Re-generate answer choices for mixedBond
+  useEffect(() => {
+    if (gameMode === 'mixed' && mixedProblem.type === 'numberBond') {
+      const { data } = mixedProblem;
+      if (data) {
+        const correctAnswer = data.blank === 'whole' ? data.whole : data.blank === 'left' ? data.part1 : data.part2;
+        setMixedBondChoices(generateBondChoices(correctAnswer, maxTotal));
+      }
+    }
+    // This stable dependency array prevents the infinite loop
+  }, [gameMode, mixedProblem.type, mixedProblem.data?.whole, maxTotal]);
+
   // Re-generate answer choices for ladderProblem
   useEffect(() => {
-    // This effect runs only when the ladder game is active
     if (gameMode === 'numberLadder' || (gameMode === 'mixed' && mixedProblem.type === 'numberLadder')) {
-      // Determine if we're in mixed mode or regular mode
       const problemSource = gameMode === 'mixed' ? mixedProblem.data : ladderProblem;
-      
-      // Check if the problem and current step are valid
-      if (problemSource && problemSource.answers && problemSource.answers[ladderStep] !== undefined) {
+      if (problemSource?.answers?.[ladderStep] !== undefined) {
         const correctAnswer = problemSource.answers[ladderStep];
-        
-        // Ensure the choices generated are in a reasonable range around the answer
         const maxChoiceValue = Math.max(20, correctAnswer + 10); 
-        
-        // Use our existing helper function to generate 8 choices
         setLadderChoices(generateBondChoices(correctAnswer, maxChoiceValue));
       }
     }
-  }, [gameMode, ladderProblem, mixedProblem, ladderStep]);
+    // FIX: Make the dependency array more stable
+  }, [gameMode, ladderProblem, mixedProblem.data?.answers, ladderStep]);
 
   // Re-generate answer choices for weightPuzzle
   useEffect(() => {
-    // This effect runs only when the weight puzzle is active
     if (gameMode === 'weightPuzzle' || (gameMode === 'mixed' && mixedProblem.type === 'weightPuzzle')) {
-      // Determine the source of the problem data
       const problemSource = gameMode === 'mixed' ? mixedProblem.data : weightProblem;
-      
-      if (problemSource && problemSource.answer !== undefined) {
+      if (problemSource?.answer !== undefined) {
         const correctAnswer = problemSource.answer;
-        // Set a reasonable max value for generating distractor choices
         const maxChoiceValue = Math.max(maxTotal, correctAnswer + 5);
-        
-        // Reuse our handy helper function to create the 8 choices
         setWeightPuzzleChoices(generateBondChoices(correctAnswer, maxChoiceValue));
       }
     }
-  }, [gameMode, weightProblem, mixedProblem, maxTotal]);
+    // FIX: Make the dependency array more stable
+  }, [gameMode, weightProblem, mixedProblem.data?.answer, maxTotal]);
+
+  useEffect(() => {
+    // Reset the timer whenever the game mode or a new problem is loaded
+    setProblemStartTime(Date.now());
+  }, [gameMode, problem, comparisonProblem, patternProblem, weightProblem, ladderProblem, shapeProblem, mixedProblem]);
 
   // --- NEXT PROBLEM FUNCTION ---
   const moveToNextProblem = useCallback(() => {
@@ -384,6 +454,7 @@ const MathGame = () => {
 
   // -- ANSWER HANDLER FOR NUMBER BOND AND NUMBER SENTENCES ---
   const handleAnswer = (value) => {
+    // 1. Determine the correct answer first based on the game stage.
     let correctAnswer;
     if (stage === "bond") {
       correctAnswer = problem.blank === "whole" ? problem.whole : problem.blank === "left" ? problem.part1 : problem.part2;
@@ -391,14 +462,23 @@ const MathGame = () => {
       correctAnswer = sentences[currentSentenceIdx].answer;
     }
 
-    if (value === correctAnswer) {
+    // 2. Now calculate stats using the correct variables.
+    const timeSpent = (Date.now() - problemStartTime) / 1000;
+    const isCorrect = value === correctAnswer;
+    updateStats('numberBond', isCorrect, timeSpent); // Use 'numberBond' for consistency
+
+    // 3. Proceed with the original logic.
+    if (isCorrect) {
       const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
       setFeedback({ type: "correct", message: `✅ ${randomMessage}` });
 
-      if (stage === 'bond') setFilledAnswer(correctAnswer);
-      else setFilledSentenceAnswer(correctAnswer);
+      if (stage === 'bond') {
+        setFilledAnswer(correctAnswer);
+      } else {
+        setFilledSentenceAnswer(correctAnswer);
+      }
       
-      awardPoint(); // Call the generic scoring function
+      awardPoint();
 
       const isGoalMet = (progress + 1) >= goal;
       const transitionDelay = isGoalMet ? 4000 : 1200;
@@ -420,13 +500,16 @@ const MathGame = () => {
 
   // --- ANSWER HANDLER for the pattern game ---
   const handlePatternAnswer = (choice) => {
-    if (choice === patternProblem.answer) {
+    const timeSpent = (Date.now() - problemStartTime) / 1000; // Time in seconds
+    const isCorrect = choice === patternProblem.answer;
+    updateStats('pattern', isCorrect, timeSpent);
+
+    if (isCorrect) {
       const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
       setFeedback({ type: "correct", message: `✅ ${randomMessage}` });
       setFilledPatternAnswer(choice);
       awardPoint();
       
-      // ADD THESE TWO LINES
       const isGoalMet = (progress + 1) >= goal;
       const transitionDelay = isGoalMet ? 4000 : 1200;
       
@@ -434,7 +517,7 @@ const MathGame = () => {
         setPatternProblem(generatePatternProblem(maxTotal * 2));
         setFilledPatternAnswer(null);
         setFeedback({ type: "", message: "" });
-      }, transitionDelay); // Use the calculated delay
+      }, transitionDelay);
     } else {
       handleIncorrectAnswer();
     }
@@ -442,6 +525,9 @@ const MathGame = () => {
   
   // --- ANSWER HANDLER for the comparison game ---
   const handleComparisonAnswer = (op) => {
+    const timeSpent = (Date.now() - problemStartTime) / 1000; // Time in seconds
+    const isCorrect = op === comparisonProblem.answer;
+    updateStats('comparison', isCorrect, timeSpent);
     if (op === comparisonProblem.answer) {
       const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
       setFeedback({ type: "correct", message: `✅ ${randomMessage}` });
@@ -464,6 +550,9 @@ const MathGame = () => {
 
   // --- ANSWER HANDLER for the weight puzzle ---
   const handleWeightAnswer = (value) => {
+    const timeSpent = (Date.now() - problemStartTime) / 1000; // Time in seconds
+    const isCorrect = value === weightProblem.answer;
+    updateStats('weight', isCorrect, timeSpent);
     if (value === weightProblem.answer) {
       setFilledWeightAnswer(value); // Fill in the answer
       setPuzzleAnimation("animate-balance-correct"); // Trigger the animation
@@ -499,6 +588,9 @@ const MathGame = () => {
 
   // --- ANSWER HANDLER for the number ladder ---
   const handleLadderAnswer = (value) => {
+    const timeSpent = (Date.now() - problemStartTime) / 1000; // Time in seconds
+    const isCorrect = value === ladderProblem.answer;
+    updateStats('numberLadder', isCorrect, timeSpent);
     if (value === ladderProblem.answers[ladderStep]) {
       const newAnswers = [...filledLadderAnswers, value];
       setFilledLadderAnswers(newAnswers);
@@ -516,6 +608,7 @@ const MathGame = () => {
           setFeedback({ type: "", message: "" });
         }, transitionDelay);
       } else {
+        awardPoint();
         setLadderStep(prevStep => prevStep + 1);
         setFeedback({ type: "", message: "" }); // Clear feedback for next step
       }
@@ -526,6 +619,9 @@ const MathGame = () => {
 
   // --- ANSWER HANDLER for the shape puzzle ---
   const handleShapeAnswer = (value) => {
+    const timeSpent = (Date.now() - problemStartTime) / 1000; // Time in seconds
+    const isCorrect = value === shapeProblem.answer;
+    updateStats('shape', isCorrect, timeSpent);
     if (value === shapeProblem.answer) {
       handleCorrectAnswer(); // <-- Use the new function here
 
@@ -584,6 +680,10 @@ const MathGame = () => {
       default:
         return;
     }
+
+    const timeSpent = (Date.now() - problemStartTime) / 1000; // Time in seconds
+    const isCorrect = value === correctAnswer;
+    updateStats(type, isCorrect, timeSpent);
     
     // Check the answer and proceed
     if (value === correctAnswer) {
@@ -645,6 +745,12 @@ const MathGame = () => {
 
   return (
     <div className="flex flex-col justify-center items-center min-h-screen bg-blue-50 font-sans p-4 overflow-x-hidden">
+      {/* Conditionally render the Progress Report Modal */}
+      {showReport && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <ProgressReport onClose={() => setShowReport(false)} />
+        </div>
+      )}
       {/* --- Game Mode Switcher --- */}
       <div className="flex items-center gap-2 p-2 bg-purple-200 rounded-lg mb-4">
         <label htmlFor="game-mode-select" className="font-semibold text-purple-800">
@@ -859,15 +965,13 @@ const MathGame = () => {
             const { type, data } = mixedProblem;
             switch (type) {
               case 'numberBond':
-                const bondAnswer = data.blank === 'whole' ? data.whole : data.blank === 'left' ? data.part1 : data.part2;
-                const bondChoices = generateBondChoices(bondAnswer, maxTotal);
                 return (
                   <>
                     <div className="text-center min-h-[180px]">
                       <div className="mb-4"><CountingCubes part1={data.part1} part2={data.part2} /></div>
                       <NumberBond problem={data} filledAnswer={filledAnswer} />
                     </div>
-                    <MultipleChoice choices={bondChoices} onSelect={handleMixedAnswer} />
+                    <MultipleChoice choices={mixedBondChoices} onSelect={handleMixedAnswer} />
                   </>
                 );
               case 'comparison':
@@ -955,17 +1059,26 @@ const MathGame = () => {
       </motion.div>
 
       {/* --- Settings --- */}
-      <div className="mt-6 bg-white p-3 rounded-lg shadow-md">
-        <label htmlFor="maxTotal" className="font-bold text-gray-600">Max Total: </label>
-        <input
-          type="number"
-          id="maxTotal"
-          value={maxTotal}
-          min={2}
-          max={99}
-          onChange={(e) => setMaxTotal(Number(e.target.value))}
-          className="w-16 p-1 border-2 border-gray-200 rounded-md text-center"
-        />
+      <div className="mt-6 bg-white p-3 rounded-lg shadow-md flex items-center gap-4">
+        <div>
+          <label htmlFor="maxTotal" className="font-bold text-gray-600">Max Total: </label>
+          <input
+            type="number"
+            id="maxTotal"
+            value={maxTotal}
+            min={2}
+            max={99}
+            onChange={(e) => setMaxTotal(Number(e.target.value))}
+            className="w-16 p-1 border-2 border-gray-200 rounded-md text-center"
+          />
+        </div>
+        {/* Add a button to show the report */}
+        <button 
+          onClick={() => setShowReport(true)}
+          className="px-4 py-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600"
+        >
+          View Progress
+        </button>
       </div>
     </div>
   );
