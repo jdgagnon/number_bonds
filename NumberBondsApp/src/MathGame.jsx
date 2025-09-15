@@ -8,6 +8,7 @@ import StarTracker from './StarTracker';
 import CountingCubes from './CountingCubes';
 import OperatorButtons from './OperatorButtons';
 import CubeDisplay from './CubeDisplay';
+import BaseTenDisplay from './BaseTenDisplay';
 import MultipleChoice from './MultipleChoice';
 import Feedback from './Feedback';
 import WeightPuzzle from './WeightPuzzle';
@@ -383,15 +384,15 @@ const MathGame = () => {
   const [showReport, setShowReport] = useState(false);
   const [maxTotal, setMaxTotal] = useState(10);
   const [gameMode, setGameMode] = useState('numberBond'); // 'numberBond', 'comparison', or 'pattern'
-  const [patternProblem, setPatternProblem] = useState(() => generatePatternProblem(20));
+  const [patternProblem, setPatternProblem] = useState(() => generatePatternProblem(maxTotal * 2));
   const [filledPatternAnswer, setFilledPatternAnswer] = useState(null);
-  const [comparisonProblem, setComparisonProblem] = useState(() => generateComparisonProblem(10));
+  const [comparisonProblem, setComparisonProblem] = useState(() => generateComparisonProblem(maxTotal));
   const [isComparisonHard, setIsComparisonHard] = useState(false);
   const [filledOperator, setFilledOperator] = useState(null);
-  const [weightProblem, setWeightProblem] = useState(() => generateWeightProblem(10));
+  const [weightProblem, setWeightProblem] = useState(() => generateWeightProblem(maxTotal));
   const [filledWeightAnswer, setFilledWeightAnswer] = useState(null);
   const [puzzleAnimation, setPuzzleAnimation] = useState(""); // For tipping animation
-  const [ladderProblem, setLadderProblem] = useState(() => generateLadderProblem(10));
+  const [ladderProblem, setLadderProblem] = useState(() => generateLadderProblem(maxTotal));
   const [ladderStep, setLadderStep] = useState(0); // Which step we are on
   const [filledLadderAnswers, setFilledLadderAnswers] = useState([]);
   const [ladderChoices, setLadderChoices] = useState([]);
@@ -401,11 +402,11 @@ const MathGame = () => {
   const [mixedProblem, setMixedProblem] = useState(() => generateRandomProblem(maxTotal));
   const [problem, setProblem] = useState(() => generateProblem(maxTotal));
   const [numberBondChoices, setNumberBondChoices] = useState(() => {
-    const initialProblem = generateProblem(10);
+    const initialProblem = generateProblem(maxTotal);
     setProblem(initialProblem); // Set initial problem here too
     const { part1, part2, whole, blank } = initialProblem;
     const answer = blank === 'whole' ? whole : blank === 'left' ? part1 : part2;
-    return generateBondChoices(answer, 10);
+    return generateBondChoices(answer, maxTotal);
   });
   const [sentences, setSentences] = useState(() => generateSentences(problem));
   const [stage, setStage] = useState("bond"); // 'bond' or 'sentence'
@@ -943,10 +944,18 @@ const MathGame = () => {
             {/* --- The Question Area --- */}
             <div className="text-center min-h-[180px]">
               <div className="mb-4">
-                <CountingCubes 
-                  key={problemKey} 
-                  part1={problem.part1} 
-                  part2={problem.part2} />
+                {maxTotal > 20 ? (
+                  <div className="flex justify-center gap-4">
+                    <BaseTenDisplay count={problem.part1} color="bg-sky-400" />
+                    <BaseTenDisplay count={problem.part2} color="bg-amber-400" />
+                  </div>
+                ) : (
+                  <CountingCubes 
+                    key={problemKey} 
+                    part1={problem.part1} 
+                    part2={problem.part2} 
+                  />
+                )}
               </div>
               {stage === 'bond' ? (
                 <NumberBond problem={problem} filledAnswer={filledAnswer} />
@@ -986,7 +995,11 @@ const MathGame = () => {
               <div className="w-1/3">
                 {/* Conditionally render the cubes */}
                 {(!isComparisonHard || filledOperator !== null) && (
-                  <CubeDisplay count={comparisonProblem.num1} color="bg-sky-400" />
+                  maxTotal > 20 ? (
+                    <BaseTenDisplay count={comparisonProblem.num1} color="bg-sky-400" />
+                  ) : (
+                    <CubeDisplay count={comparisonProblem.num1} color="bg-sky-400" />
+                  )
                 )}
                 <div className="text-6xl font-bold text-gray-700">{comparisonProblem.num1}</div>
               </div>
@@ -1004,7 +1017,11 @@ const MathGame = () => {
               <div className="w-1/3">
                 {/* Conditionally render the cubes */}
                 {(!isComparisonHard || filledOperator !== null) && (
-                  <CubeDisplay count={comparisonProblem.num2} color="bg-amber-400" />
+                  maxTotal > 20 ? (
+                    <BaseTenDisplay count={comparisonProblem.num2} color="bg-amber-400" />
+                  ) : (
+                    <CubeDisplay count={comparisonProblem.num2} color="bg-amber-400" />
+                  )
                 )}
                 <div className="text-6xl font-bold text-gray-700">{comparisonProblem.num2}</div>
               </div>
@@ -1084,13 +1101,25 @@ const MathGame = () => {
             const { type, data } = mixedProblem;
             switch (type) {
               case 'numberBond':
+                const bondAnswer = data.blank === 'whole' ? data.whole : data.blank === 'left' ? data.part1 : data.part2;
+                const bondChoices = generateBondChoices(bondAnswer, maxTotal);
                 return (
                   <>
                     <div className="text-center min-h-[180px]">
-                      <div className="mb-4"><CountingCubes part1={data.part1} part2={data.part2} /></div>
+                      <div className="mb-4">
+                        {/* Add the same conditional logic here */}
+                        {maxTotal > 20 ? (
+                          <div className="flex justify-center gap-4">
+                            <BaseTenDisplay count={data.part1} color="bg-sky-400" />
+                            <BaseTenDisplay count={data.part2} color="bg-amber-400" />
+                          </div>
+                        ) : (
+                          <CountingCubes part1={data.part1} part2={data.part2} />
+                        )}
+                      </div>
                       <NumberBond problem={data} filledAnswer={filledAnswer} />
                     </div>
-                    <MultipleChoice choices={mixedBondChoices} onSelect={handleMixedAnswer} />
+                    <MultipleChoice choices={bondChoices} onSelect={handleMixedAnswer} />
                   </>
                 );
               case 'comparison':
@@ -1101,7 +1130,11 @@ const MathGame = () => {
                       <div className="w-1/3">
                         {/* Conditionally render the cubes */}
                         {(!isComparisonHard || filledOperator !== null) && (
-                          <CubeDisplay count={data.num1} color="bg-sky-400" />
+                          maxTotal > 20 ? (
+                            <BaseTenDisplay count={comparisonProblem.num2} color="bg-amber-400" />
+                          ) : (
+                            <CubeDisplay count={comparisonProblem.num2} color="bg-amber-400" />
+                          )
                         )}
                         <div className="text-6xl font-bold text-gray-700">{data.num1}</div>
                       </div>
@@ -1119,7 +1152,11 @@ const MathGame = () => {
                       <div className="w-1/3">
                         {/* Conditionally render the cubes */}
                         {(!isComparisonHard || filledOperator !== null) && (
-                          <CubeDisplay count={data.num2} color="bg-amber-400" />
+                          maxTotal > 20 ? (
+                            <BaseTenDisplay count={comparisonProblem.num2} color="bg-amber-400" />
+                          ) : (
+                            <CubeDisplay count={comparisonProblem.num2} color="bg-amber-400" />
+                          )
                         )}
                         <div className="text-6xl font-bold text-gray-700">{data.num2}</div>
                       </div>
