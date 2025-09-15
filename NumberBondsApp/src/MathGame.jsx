@@ -538,7 +538,27 @@ const MathGame = () => {
   // --- GENERAL INCORRECT ANSWER HANDLER ---
   const handleIncorrectAnswer = () => {
     setFeedback({ type: "incorrect", message: "❌ Oops, try again!" });
-    setProgress(prevProgress => Math.max(0, prevProgress - 1));
+
+    // Case 1: The progress bar has power.
+    if (progress > 0) {
+      setProgress(progress - 1);
+      return; // Stop here
+    }
+
+    // Case 2: The progress bar is empty, but there are stars to take.
+    if (stars > 0) {
+      setStars(stars - 1);
+      return; // Stop here
+    }
+
+    // Case 3: Progress is 0 and stars are 0. Decrease the level.
+    const newLevel = Math.max(0, starLevel - 1);
+    setStarLevel(newLevel);
+    setStars(5); // Reset stars to 5 after leveling down
+
+    // Update localStorage to keep everything in sync
+    localStorage.setItem('mathGameStarLevel', JSON.stringify(newLevel));
+    localStorage.setItem('mathGameStars', JSON.stringify(5));
   };
 
   // -- ANSWER HANDLER FOR NUMBER BOND AND NUMBER SENTENCES ---
@@ -843,6 +863,7 @@ const MathGame = () => {
             setStars={setStars}
             starLevel={starLevel}
             setStarLevel={setStarLevel}
+            setFeedback={setFeedback}
           />
         </div>
       )}

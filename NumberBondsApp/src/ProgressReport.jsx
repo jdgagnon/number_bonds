@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const ProgressReport = ({ onClose, onClear, stars, setStars, starLevel, setStarLevel }) => { 
+const ProgressReport = ({ onClose, onClear, stars, setStars, starLevel, setStarLevel, setFeedback }) => { 
   const [stats, setStats] = useState(null);
   const [editableStars, setEditableStars] = useState(stars);
   const [editableLevel, setEditableLevel] = useState(starLevel);
@@ -27,11 +27,20 @@ const ProgressReport = ({ onClose, onClear, stars, setStars, starLevel, setStarL
   const handleSaveStarData = () => {
     const newStars = Number(editableStars);
     const newLevel = Number(editableLevel);
+
     setStars(newStars);
     setStarLevel(newLevel);
+
     localStorage.setItem('mathGameStars', JSON.stringify(newStars));
     localStorage.setItem('mathGameStarLevel', JSON.stringify(newLevel));
-    alert("Star and Level data saved!");
+
+    onClose();
+
+    setFeedback({ type: "correct", message: "✅ Rewards Saved!" });
+
+    setTimeout(() => {
+      setFeedback({ type: "", message: "" });
+    }, 2000);
   };
 
   return (

@@ -7,8 +7,12 @@ const STAR_COLORS = [
   { fill: 'fill-lime-400', stroke: 'stroke-lime-600' },   // Level 2
   { fill: 'fill-fuchsia-400', stroke: 'stroke-fuchsia-600' }, // Level 3
   { fill: 'fill-orange-400', stroke: 'stroke-orange-600' }, // Level 4
-  { fill: 'fill-[url(#rainbow)]', stroke: 'stroke-gray-500' }, // Level 5 (rainbow)
+  { fill: 'fill-[url(#rainbow1)]', stroke: 'stroke-gray-500' }, // Level 5 (rainbow1)
   { fill: 'fill-[url(#rainbow2)]', stroke: 'stroke-gray-500' }, // Level 6 (rainbow2)
+  { fill: 'fill-[url(#rainbow3)]', stroke: 'stroke-gray-500' }, // Level 7 (rainbow3)
+  { fill: 'fill-[url(#rainbow4)]', stroke: 'stroke-gray-500' }, // Level 8 (rainbow4)
+  { fill: 'fill-[url(#rainbow5)]', stroke: 'stroke-gray-500' }, // Level 9 (rainbow5)
+  { fill: 'fill-[url(#rainbow6)]', stroke: 'stroke-gray-500' }, // Level 10 (rainbow6)
 ];
 
 // Number of sparkle elements for each star
@@ -16,7 +20,7 @@ const NUM_SPARKLES = 50;
 
 // This is a single Star component. It's either empty (gray) or filled (yellow and glowing with sparkles).
 const Star = ({ filled, level, isSpinning, isShooting }) => {
-  if (level >= 40) {
+  if (level >= 33) {
     // Only show a unicorn for stars that are "filled" (earned)
     if (filled) {
       return <DancingUnicorn />;
@@ -83,8 +87,8 @@ const Star = ({ filled, level, isSpinning, isShooting }) => {
 // This component tracks and displays all 5 stars.
 const StarTracker = ({ count, level }) => {
   const maxStars = 5;
-  const spinLevel = 5;
-  const shootLevel = 6;
+  const spinLevel = 12;
+  const shootLevel = 23;
   const isSpinning = level === spinLevel;
   const isShooting = level >= shootLevel;
 
@@ -93,12 +97,8 @@ const StarTracker = ({ count, level }) => {
     <div className="flex justify-center gap-2 mb-2 p-2 bg-purple-100 rounded-full shadow-inner overflow-hidden">
       <svg width="0" height="0" className="absolute">
         <defs>
-          <linearGradient id="rainbow" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style={{ stopColor: '#ef4444', stopOpacity: 1 }} />
-            <stop offset="50%" style={{ stopColor: '#8b5cf6', stopOpacity: 1 }} />
-            <stop offset="100%" style={{ stopColor: '#3b82f6', stopOpacity: 1 }} />
-          </linearGradient>
-          <linearGradient id="rainbow2" x1="0%" y1="0%" x2="100%" y2="0%">
+
+          <linearGradient id="rainbow1" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" style={{ stopColor: '#ef4444' }} />   
             <stop offset="17%" style={{ stopColor: '#f97316' }} />  
             <stop offset="34%" style={{ stopColor: '#eab308' }} />  
@@ -106,6 +106,33 @@ const StarTracker = ({ count, level }) => {
             <stop offset="68%" style={{ stopColor: '#3b82f6' }} />  
             <stop offset="85%" style={{ stopColor: '#4f46e5' }} />  
             <stop offset="100%" style={{ stopColor: '#8b5cf6' }} /> 
+          </linearGradient>
+          <linearGradient id="rainbow2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style={{ stopColor: '#ef4444', stopOpacity: 1 }} />
+            <stop offset="50%" style={{ stopColor: '#8b5cf6', stopOpacity: 1 }} />
+            <stop offset="100%" style={{ stopColor: '#3b82f6', stopOpacity: 1 }} />
+          </linearGradient>
+          <linearGradient id="rainbow3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style={{ stopColor: '#fb7185' }} />   
+            <stop offset="25%" style={{ stopColor: '#facc15' }} />  
+            <stop offset="50%" style={{ stopColor: '#4ade80' }} />  
+            <stop offset="75%" style={{ stopColor: '#60a5fa' }} />  
+            <stop offset="100%" style={{ stopColor: '#c084fc' }} /> 
+          </linearGradient>
+          <linearGradient id="rainbow4" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style={{ stopColor: '#f97316' }} />   
+            <stop offset="50%" style={{ stopColor: '#ef4444' }} />  
+            <stop offset="100%" style={{ stopColor: '#c026d3' }} /> 
+          </linearGradient>
+          <linearGradient id="rainbow5" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" style={{ stopColor: '#14b8a6' }} />   
+            <stop offset="50%" style={{ stopColor: '#3b82f6' }} />  
+            <stop offset="100%" style={{ stopColor: '#8b5cf6' }} /> 
+          </linearGradient>
+          <linearGradient id="rainbow6" x1="0%" y1="50%" x2="100%" y2="50%">
+            <stop offset="0%" style={{ stopColor: '#a3e635' }} />   
+            <stop offset="50%" style={{ stopColor: '#22d3ee' }} />  
+            <stop offset="100%" style={{ stopColor: '#f472b6' }} /> 
           </linearGradient>
         </defs>
       </svg>
