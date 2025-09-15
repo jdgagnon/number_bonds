@@ -87,8 +87,8 @@ const Star = ({ filled, level, isSpinning, isShooting }) => {
 // This component tracks and displays all 5 stars.
 const StarTracker = ({ count, level }) => {
   const maxStars = 5;
-  const spinLevel = 12;
-  const shootLevel = 23;
+  const spinLevel = 11;
+  const shootLevel = 22;
   const isSpinning = level >= spinLevel;
   const isShooting = level >= shootLevel;
 

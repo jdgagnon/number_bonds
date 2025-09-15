@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import NumberBond from "./NumberBond";
 import NumberPad from "./NumberPad";
 import ProgressBar from "./ProgressBar";
+import ProgressTracker from "./ProgressTracker";
 import StarTracker from './StarTracker';
 import CountingCubes from './CountingCubes';
 import OperatorButtons from './OperatorButtons';
@@ -359,20 +360,32 @@ const generateShapeProblem = () => {
       ],
     },
   ];
-  // Return a random puzzle from the list
-  return puzzles[Math.floor(Math.random() * puzzles.length)];
+
+  const puzzle = puzzles[Math.floor(Math.random() * puzzles.length)];
+
+  // NEW: Generate multiple-choice options for the selected puzzle
+  const choices = new Set([puzzle.answer]);
+  while (choices.size < 4) { // Generate 4 total choices
+    const randomChoice = puzzle.answer + (Math.floor(Math.random() * 5) - 2);
+    if (randomChoice >= 0 && randomChoice !== puzzle.answer) {
+      choices.add(randomChoice);
+    }
+  }
+  
+  // Return the puzzle data along with the shuffled choices
+  return { 
+    ...puzzle, 
+    choices: Array.from(choices).sort(() => Math.random() - 0.5) 
+  };
 };
 
-const updateStats = (gameType, isCorrect) => {
-  // 1. Get existing stats from localStorage or create a new object
+const updateStats = (gameType, isCorrect, setLevelProgress, setShowConfetti) => {
   const stats = JSON.parse(localStorage.getItem('mathGameStats')) || {};
 
-  // 2. Ensure the gameType entry exists
   if (!stats[gameType]) {
     stats[gameType] = { correct: 0, incorrect: 0, totalAttempts: 0 };
   }
 
-  // 3. Update the stats
   stats[gameType].totalAttempts += 1;
   if (isCorrect) {
     stats[gameType].correct += 1;
@@ -380,9 +393,23 @@ const updateStats = (gameType, isCorrect) => {
     stats[gameType].incorrect += 1;
   }
 
-  // 4. Save the updated stats back to localStorage
   localStorage.setItem('mathGameStats', JSON.stringify(stats));
 
+  if (isCorrect) {
+    setLevelProgress(prevProgress => {
+      const newCount = (prevProgress[gameType] || 0) + 1;
+      const newLevelProgress = { ...prevProgress, [gameType]: newCount };
+      
+      const requiredCorrect = 5;
+      // If this answer completes the goal for THIS game, show confetti
+      if (newCount === requiredCorrect) {
+        setShowConfetti(true);
+        setTimeout(() => setShowConfetti(false), 4000);
+      }
+      
+      return newLevelProgress;
+    });
+  }
   return stats[gameType];
 };
 
@@ -437,14 +464,24 @@ const MathGame = () => {
     const savedLevel = localStorage.getItem('mathGameStarLevel');
     return savedLevel !== null ? JSON.parse(savedLevel) : 0;
   });
+  // State to track correct answers per game for the current level
+  const [levelProgress, setLevelProgress] = useState(() => {
+    const saved = localStorage.getItem('mathGameLevelProgress');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  // Effect to save levelProgress whenever it changes
+  useEffect(() => {
+    localStorage.setItem('mathGameLevelProgress', JSON.stringify(levelProgress));
+  }, [levelProgress]);
 
   useEffect(() => {
     localStorage.setItem('mathGameStars', JSON.stringify(stars));
     localStorage.setItem('mathGameStarLevel', JSON.stringify(starLevel));
     }, [stars, starLevel]);
 
-    // Re-generate problem when maxTotal changes
-    useEffect(() => {
+  // Re-generate problem when maxTotal changes
+  useEffect(() => {
     if (gameMode !== 'numberBond') return;
 
     let correctAnswer;
@@ -557,32 +594,17 @@ const MathGame = () => {
 
   // --- AWARD POINT FUNCTION ---
   const awardPoint = () => {
-    const isGoalMet = (progress + 1) >= goal;
-
-    // Handle star leveling and confetti
-    if (isGoalMet) {
-      setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 4000);
-      
-      // This corrected logic checks the number of stars at the right time
-      setStars(prevStars => {
-      if (prevStars === 5) {
-        // Use a functional update for starLevel to avoid stale state
-        setStarLevel(prevLevel => {
-          const newLevel = prevLevel + 1;
-          // Don't let the level number itself reset, just let the colors loop in the StarTracker
-          return newLevel;
-        });
-        return 1;
-      }
-      return prevStars + 1;
-    });
-  }
-
-    // Handle progress bar updates
     setProgress(prevProgress => {
       const newProgress = prevProgress + 1;
-      return newProgress >= goal ? 0 : newProgress;
+      if (newProgress >= goal) {
+        setStars(prevStars => {
+          const newStars = Math.min(5, prevStars + 1);
+          localStorage.setItem('mathGameStars', JSON.stringify(newStars));
+          return newStars;
+        });
+        return 0; // Reset progress bar
+      }
+      return newProgress;
     });
   };
 
@@ -591,30 +613,46 @@ const MathGame = () => {
     const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
     setFeedback({ type: "correct", message: `✅ ${randomMessage}` });
     awardPoint();
+
+    const currentGame = gameMode === 'mixed' ? mixedProblem.type : gameMode;
+    const nextLevelProgress = {
+      ...levelProgress,
+      [currentGame]: (levelProgress[currentGame] || 0) + 1
+    };
+    
+    const requiredCorrect = 5;
+    const allGamesComplete = GAME_TYPES.every(game => (nextLevelProgress[game] || 0) >= requiredCorrect);
+
+    if (allGamesComplete) {
+      // Confetti logic is no longer needed here, but you can add an extra one for the level-up if you want
+      setStarLevel(prev => prev + 1);
+      setLevelProgress({});
+      setStars(0);
+      setProgress(0);
+      localStorage.setItem('mathGameStarLevel', JSON.stringify(starLevel + 1));
+      localStorage.setItem('mathGameStars', JSON.stringify(0));
+    }
   };
 
   // --- GENERAL INCORRECT ANSWER HANDLER ---
   const handleIncorrectAnswer = () => {
     setFeedback({ type: "incorrect", message: "❌ Oops, try again!" });
 
-    // Case 1: The progress bar has power.
     if (progress > 0) {
       setProgress(progress - 1);
-      return; // Stop here
+      return;
     }
-
-    // Case 2: The progress bar is empty, but there are stars to take.
     if (stars > 0) {
-      setStars(stars - 1);
-      return; // Stop here
+      const newStars = stars - 1;
+      setStars(newStars);
+      // Add this missing line to save the new star count
+      localStorage.setItem('mathGameStars', JSON.stringify(newStars));
+      return;
     }
 
-    // Case 3: Progress is 0 and stars are 0. Decrease the level.
     const newLevel = Math.max(0, starLevel - 1);
     setStarLevel(newLevel);
-    setStars(5); // Reset stars to 5 after leveling down
-
-    // Update localStorage to keep everything in sync
+    setStars(5);
     localStorage.setItem('mathGameStarLevel', JSON.stringify(newLevel));
     localStorage.setItem('mathGameStars', JSON.stringify(5));
   };
@@ -630,12 +668,12 @@ const MathGame = () => {
     }
 
     const isCorrect = value === correctAnswer;
-    updateStats('numberBond', isCorrect);
+    updateStats('numberBond', isCorrect, setLevelProgress, setShowConfetti);
 
     // 2. Use a single 'if (isCorrect)' block for all correct-answer logic.
     if (isCorrect) {
       // MOVE the difficulty check inside here
-      const updatedStats = updateStats('numberBond', isCorrect);
+      const updatedStats = updateStats('numberBond', isCorrect, setLevelProgress, setShowConfetti);
       if (updatedStats.correct >= 25) {
         setIsNumberBondHard(true);
       }
@@ -649,11 +687,8 @@ const MathGame = () => {
       } else {
         setFilledSentenceAnswer(correctAnswer);
       }
-      
+      handleCorrectAnswer();
       awardPoint(); // This updates the progress bar
-
-      const isGoalMet = (progress + 1) >= goal;
-      const transitionDelay = isGoalMet ? 4000 : 1200;
       
       // This advances the game to the next stage/question
       setTimeout(() => {
@@ -666,7 +701,7 @@ const MathGame = () => {
         } else {
           moveToNextProblem();
         }
-      }, transitionDelay);
+      }, 1200);
     } else {
       handleIncorrectAnswer();
     }
@@ -675,22 +710,20 @@ const MathGame = () => {
   // --- ANSWER HANDLER for the pattern game ---
   const handlePatternAnswer = (choice) => {
     const isCorrect = choice === patternProblem.answer;
-    updateStats('pattern', isCorrect);
+    updateStats('pattern', isCorrect, setLevelProgress, setShowConfetti);
 
     if (isCorrect) {
       const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
       setFeedback({ type: "correct", message: `✅ ${randomMessage}` });
       setFilledPatternAnswer(choice);
       awardPoint();
-      
-      const isGoalMet = (progress + 1) >= goal;
-      const transitionDelay = isGoalMet ? 4000 : 1200;
+      handleCorrectAnswer();
       
       setTimeout(() => {
         setPatternProblem(generatePatternProblem(maxTotal * 2));
         setFilledPatternAnswer(null);
         setFeedback({ type: "", message: "" });
-      }, transitionDelay);
+      }, 1200);
     } else {
       handleIncorrectAnswer();
     }
@@ -699,7 +732,7 @@ const MathGame = () => {
   // --- ANSWER HANDLER for the comparison game ---
   const handleComparisonAnswer = (op) => {
     const isCorrect = op === comparisonProblem.answer;
-    const updatedStats = updateStats('comparison', isCorrect);
+    const updatedStats = updateStats('comparison', isCorrect, setLevelProgress, setShowConfetti);
     if (updatedStats.correct >= 25) {
       setIsComparisonHard(true);
     }
@@ -709,15 +742,11 @@ const MathGame = () => {
       setFilledOperator(op);
       awardPoint();
       
-      // ADD THESE TWO LINES
-      const isGoalMet = (progress + 1) >= goal;
-      const transitionDelay = isGoalMet ? 4000 : 1200;
-      
       setTimeout(() => {
         setComparisonProblem(generateComparisonProblem(maxTotal));
         setFilledOperator(null);
         setFeedback({ type: "", message: "" });
-      }, transitionDelay); // Use the calculated delay
+      }, 1200); // Use the calculated delay
     } else {
       handleIncorrectAnswer();
     }
@@ -726,7 +755,7 @@ const MathGame = () => {
   // --- ANSWER HANDLER for the weight puzzle ---
   const handleWeightAnswer = (value) => {
     const isCorrect = value === weightProblem.answer;
-    updateStats('weight', isCorrect);
+    updateStats('weight', isCorrect, setLevelProgress, setShowConfetti);
     if (value === weightProblem.answer) {
       setFilledWeightAnswer(value); // Fill in the answer
       setPuzzleAnimation("animate-balance-correct"); // Trigger the animation
@@ -736,14 +765,11 @@ const MathGame = () => {
         setPuzzleAnimation("");
       }, 1000);
 
-      const isGoalMet = (progress + 1) >= goal;
-      const transitionDelay = isGoalMet ? 4000 : 1500; // A slightly longer delay
-
       setTimeout(() => {
         setWeightProblem(generateWeightProblem(maxTotal));
         setFilledWeightAnswer(null);
         setFeedback({ type: "", message: "" });
-      }, transitionDelay);
+      }, 1500);
     } else {
       handleIncorrectAnswer();
       const totalLeft = weightProblem.leftSide.reduce((sum, item) => sum + item.weight, 0);
@@ -766,7 +792,7 @@ const MathGame = () => {
     const isCorrect = value === ladderProblem.answers[ladderStep];
     
     // 2. Update stats with the correct result.
-    updateStats('numberLadder', isCorrect);
+    updateStats('numberLadder', isCorrect, setLevelProgress, setShowConfetti);
 
     // 3. Use the 'isCorrect' variable to proceed with the rest of the logic.
     if (isCorrect) {
@@ -776,15 +802,12 @@ const MathGame = () => {
       if (ladderStep === ladderProblem.answers.length - 1) {
         handleCorrectAnswer();
 
-        const isGoalMet = (progress + 1) >= goal;
-        const transitionDelay = isGoalMet ? 4000 : 1200;
-
         setTimeout(() => {
           setLadderProblem(generateLadderProblem(maxTotal));
           setFilledLadderAnswers([]);
           setLadderStep(0);
           setFeedback({ type: "", message: "" });
-        }, transitionDelay);
+        }, 1200);
       } else {
         awardPoint();
         setLadderStep(prevStep => prevStep + 1);
@@ -798,17 +821,14 @@ const MathGame = () => {
   // --- ANSWER HANDLER for the shape puzzle ---
   const handleShapeAnswer = (value) => {
     const isCorrect = value === shapeProblem.answer;
-    updateStats('shape', isCorrect);
+    updateStats('shape', isCorrect, setLevelProgress, setShowConfetti);
     if (value === shapeProblem.answer) {
       handleCorrectAnswer(); // <-- Use the new function here
-
-      const isGoalMet = (progress + 1) >= goal;
-      const transitionDelay = isGoalMet ? 4000 : 1200;
 
       setTimeout(() => {
         setShapeProblem(generateShapeProblem());
         setFeedback({ type: "", message: "" });
-      }, transitionDelay);
+      }, 1200);
     } else {
       handleIncorrectAnswer();
     }
@@ -859,7 +879,7 @@ const MathGame = () => {
     }
 
     const isCorrect = value === correctAnswer;
-    const updatedStats = updateStats(type, isCorrect);
+    const updatedStats = updateStats(type, isCorrect, setLevelProgress, setShowConfetti);
     
     // Check the answer and proceed
     if (value === correctAnswer) {
@@ -885,9 +905,6 @@ const MathGame = () => {
           break;
       }
 
-      const isGoalMet = (progress + 1) >= goal;
-      const transitionDelay = isGoalMet ? 4000 : 1200;
-
       // Special handling for multi-step ladder game
       if (type === 'numberLadder') {
         setFilledLadderAnswers(prev => [...prev, value]); // Show correct answer
@@ -900,7 +917,7 @@ const MathGame = () => {
         }
       }
 
-      setTimeout(moveToNextMixedProblem, transitionDelay);
+      setTimeout(moveToNextMixedProblem, 1200);
     } else {
       handleIncorrectAnswer();
       if (type === 'weightPuzzle') { // Trigger animation for this specific game
@@ -920,23 +937,13 @@ const MathGame = () => {
   const problemKey = `${problem.part1}-${problem.part2}-${currentSentenceIdx}`;
   const activeSentence = sentences[currentSentenceIdx];
   const [partBefore, partAfter] = activeSentence.text.split('?');
+  const requiredCorrect = 5;
+  const currentGame = gameMode === 'mixed' ? mixedProblem.type : gameMode;
+  const currentProgress = levelProgress[currentGame] || 0;
+  const isCurrentGameComplete = currentProgress >= requiredCorrect;
 
   return (
     <div className="flex flex-col justify-center items-center min-h-screen bg-blue-50 font-sans p-4 overflow-x-hidden">
-      {/* Conditionally render the Progress Report Modal */}
-      {showReport && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4 overflow-y-auto">
-          <ProgressReport 
-            onClose={() => setShowReport(false)} 
-            onClear={() => setIsComparisonHard(false)}
-            stars={stars}
-            setStars={setStars}
-            starLevel={starLevel}
-            setStarLevel={setStarLevel}
-            setFeedback={setFeedback}
-          />
-        </div>
-      )}
       {/* --- Game Mode Switcher --- */}
       <div className="flex items-center gap-2 p-2 bg-purple-200 rounded-lg mb-4">
         <label htmlFor="game-mode-select" className="font-semibold text-purple-800">
@@ -970,13 +977,38 @@ const MathGame = () => {
         </div>
       </div>
 
-      {/* --- Star Tracker and Progress Bar --- */}
-      <div className="w-full max-w-sm mb-4">
-        <StarTracker count={stars} level={starLevel} />
-        <ProgressBar progress={progress} goal={goal} />
-      </div>
+      {/* Conditionally render the Progress Report Modal */}
+      {showReport && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4 overflow-y-auto">
+          <ProgressReport 
+            onClose={() => setShowReport(false)} 
+            onClear={() => {
+              setIsComparisonHard(false);
+              setIsNumberBondHard(false); // Also reset the number bond difficulty
+              setLevelProgress({}); // <-- Add this
+            }}
+            stars={stars}
+            setStars={setStars}
+            starLevel={starLevel}
+            setStarLevel={setStarLevel}
+            setFeedback={setFeedback}
+          />
+        </div>
+      )}
 
-      
+      {/* --- Star Tracker and Progress --- */}
+      <div className="w-full max-w-sm mb-4 space-y-2">
+        {/* The ProgressTracker is now a more subtle summary */}
+        <ProgressTracker levelProgress={levelProgress} gameTypes={GAME_TYPES} goal={requiredCorrect} />
+        <StarTracker count={stars} level={starLevel} />
+        
+        {/* The ProgressBar now shows progress for the current game */}
+        <ProgressBar 
+          progress={Math.min(currentProgress, requiredCorrect)} // Don't show progress over the goal
+          goal={requiredCorrect} 
+          isComplete={isCurrentGameComplete} 
+        />
+      </div>
 
       {/* --- Main Game Card --- */}
       <motion.div 
@@ -1015,7 +1047,6 @@ const MathGame = () => {
               <div className="mb-4">
                 {/* The logic is now inside CountingCubes! */}
                 <CountingCubes 
-                  key={problemKey} 
                   part1={problem.part1} 
                   part2={problem.part2}
                   maxTotal={maxTotal}
@@ -1074,7 +1105,13 @@ const MathGame = () => {
               </div>
               
               {/* Middle Operator */}
-              {/* ... */}
+              <div className="w-1/3 flex justify-center items-center h-24">
+                {filledOperator ? (
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-6xl font-bold text-purple-600">{filledOperator}</motion.div>
+                ) : (
+                  <div className="w-20 h-20 border-4 border-dashed border-gray-300 rounded-full"></div>
+                )}
+              </div>
 
               {/* Right Side */}
               <div className="w-1/3">
@@ -1154,9 +1191,9 @@ const MathGame = () => {
           <div className="text-center">
             <h3 className="text-2xl font-bold text-gray-600 mb-4">{shapeProblem.question}</h3>
             <ShapePuzzle problem={shapeProblem} />
-            <NumberPad 
-              maxNumber={10} // The number of shapes to count is usually small
-              onNumberClick={handleShapeAnswer}
+            <MultipleChoice
+              choices={shapeProblem.choices}
+              onSelect={handleShapeAnswer}
               disabled={feedback.type === 'correct'}
             />
           </div>
@@ -1174,12 +1211,12 @@ const MathGame = () => {
                       <div className="mb-4">
                         {/* The logic is now inside CountingCubes! */}
                         <CountingCubes 
-                          key={problemKey} 
-                          part1={problem.part1} 
-                          part2={problem.part2}
+                          key={`${data.part1}-${data.part2}`} 
+                          part1={data.part1}
+                          part2={data.part2}
                           maxTotal={maxTotal}
                           isNumberBondHard={isNumberBondHard}
-                          stage={`bond`}
+                          stage={'bond'}
                           filledAnswer={filledAnswer}
                         />
                       </div>
@@ -1284,7 +1321,11 @@ const MathGame = () => {
                   <div className="text-center">
                     <h3 className="text-2xl font-bold text-gray-600 mb-4">{data.question}</h3>
                     <ShapePuzzle problem={data} />
-                    <NumberPad maxNumber={10} onNumberClick={handleMixedAnswer} disabled={feedback.type === 'correct'}/>
+                    <MultipleChoice
+                      choices={data.choices}      // Correct data
+                      onSelect={handleMixedAnswer}  // Correct function
+                      disabled={feedback.type === 'correct'}
+                    />
                   </div>
                 );
               default:

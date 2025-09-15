@@ -19,6 +19,7 @@ const ProgressReport = ({ onClose, onClear, stars, setStars, starLevel, setStarL
 
     if (isConfirmed) {
       localStorage.removeItem('mathGameStats');
+      localStorage.removeItem('mathGameLevelProgress');
       setStats(null);
       onClear();
     }
