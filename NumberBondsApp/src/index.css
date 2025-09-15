@@ -161,3 +161,24 @@ body {
 .animate-balance-correct {
   animation: balance-correct 0.5s ease-in-out;
 }
+
+.difficulty-dropdown {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-color: #f3e8ff; /* Light purple background */
+  border: 2px solid #c084fc; /* Medium purple border */
+  border-radius: 8px;
+  padding: 8px 32px 8px 16px; /* Extra padding on the right for the arrow */
+  font-weight: 600;
+  color: #5b21b6; /* Dark purple text */
+  cursor: pointer;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="%235b21b6"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>');
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 1.5em 1.5em;
+}
+
+.difficulty-dropdown:hover {
+  border-color: #a855f7;
+}

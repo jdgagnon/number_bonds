@@ -1,61 +1,31 @@
-import React, { useState, useEffect } from "react";
+import React from 'react';
+import CubeDisplay from './CubeDisplay';
+import BaseTenDisplay from './BaseTenDisplay';
 
-// A small helper component for the cube itself
-const Cube = ({ isCounted, onClick, color }) => (
-  <div
-    onClick={onClick}
-    className={`relative w-8 h-8 ${color} rounded-md cursor-pointer shadow-sm transition-transform hover:scale-110`}
-  >
-    {isCounted && (
-      <div
-        className="absolute top-1/2 left-0 w-full h-1 bg-red-500 transform -rotate-45"
-        style={{ pointerEvents: "none" }}
-      />
-    )}
-  </div>
-);
+const CountingCubes = ({ part1, part2, maxTotal, isNumberBondHard, stage, filledAnswer }) => {
+  
+  // Hide cubes if it's hard mode, the bond stage, AND no answer has been filled in yet.
+  // Checking for 'null' ensures it works correctly.
+  if (isNumberBondHard && stage === 'bond' && filledAnswer === null) {
+    return <div className="min-h-[100px]" />;
+  }
 
-const CountingCubes = ({ part1, part2 }) => {
-  const totalCubes = part1 + part2;
-  const [counted, setCounted] = useState(Array(totalCubes).fill(false));
-
-  useEffect(() => {
-    setCounted(Array(totalCubes).fill(false));
-  }, [part1, part2]);
-
-  const handleCubeClick = (index) => {
-    const newCounted = [...counted];
-    newCounted[index] = !newCounted[index];
-    setCounted(newCounted);
-  };
+  if (maxTotal > 20) {
+    return (
+      <div className="flex justify-center items-center flex-wrap gap-2 p-2 min-h-[100px]">
+        <div className="flex justify-center gap-4">
+          <BaseTenDisplay count={part1} color="bg-sky-400" />
+          {/* FIX: Corrected the color class typo below */}
+          <BaseTenDisplay count={part2} color="bg-amber-400" />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex justify-center items-center flex-wrap gap-3 p-4 border rounded-lg bg-gray-50">
-      {/* --- Group 1 (part1) --- */}
-      <div className="flex gap-2 flex-wrap justify-center">
-        {Array.from({ length: part1 }).map((_, index) => (
-          <Cube
-            key={index}
-            isCounted={counted[index]}
-            onClick={() => handleCubeClick(index)}
-            color="bg-sky-400" // First color
-          />
-        ))}
-      </div>
-
-      {/* The plus sign separator has been removed from here */}
-
-      {/* --- Group 2 (part2) --- */}
-      <div className="flex gap-2 flex-wrap justify-center">
-        {Array.from({ length: part2 }).map((_, index) => (
-          <Cube
-            key={part1 + index}
-            isCounted={counted[part1 + index]}
-            onClick={() => handleCubeClick(part1 + index)}
-            color="bg-amber-400" // Second color
-          />
-        ))}
-      </div>
+    <div className="flex justify-center items-center gap-4 p-2 min-h-[100px]">
+      <CubeDisplay count={part1} color="bg-sky-400" />
+      <CubeDisplay count={part2} color="bg-amber-400" />
     </div>
   );
 };

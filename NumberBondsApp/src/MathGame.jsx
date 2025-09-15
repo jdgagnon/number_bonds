@@ -18,7 +18,12 @@ import ProgressReport from './ProgressReport';
 
 // --- Helper Functions ---
 const GAME_TYPES = ['numberBond', 'comparison', 'pattern', 'weightPuzzle', 'numberLadder', 'shapePuzzle'];
-
+const DIFFICULTY_LEVELS = {
+  easy: { name: 'Easy', max: 10 },
+  medium: { name: 'Medium', max: 20 },
+  hard: { name: 'Hard', max: 50 },
+  expert: { name: 'Expert', max: 100 },
+};
 const generateRandomProblem = (max) => {
   // 1. Pick a random game type from the list
   const randomType = GAME_TYPES[Math.floor(Math.random() * GAME_TYPES.length)];
@@ -148,29 +153,34 @@ const generateWeightProblem = (max) => {
 };
 
 const generateLadderProblem = (max) => {
+  // 1. Make the operations dynamic based on the max value
+  const addAmount1 = Math.floor(Math.random() * (max / 4)) + 1;
+  const addAmount2 = Math.floor(Math.random() * (max / 2)) + 2;
+  const subAmount1 = Math.floor(Math.random() * (max / 3)) + 1;
+
   const operations = [
-    { text: '+ 2', operation: (n) => n + 2 },
-    { text: '- 3', operation: (n) => n - 3, requires: 3 }, // requires: n >= 3
-    { text: '+ 5', operation: (n) => n + 5 },
-    { text: '+ 10', operation: (n) => n + 10 },
+    { text: `+ ${addAmount1}`, operation: (n) => n + addAmount1 },
+    { text: `- ${subAmount1}`, operation: (n) => n - subAmount1, requires: subAmount1 },
+    { text: `+ ${addAmount2}`, operation: (n) => n + addAmount2 },
   ];
   
-  // Start with a higher number to give subtraction a chance
-  const startNumber = Math.floor(Math.random() * 10) + 5; 
+  // 2. Make the starting number dynamic, ensuring it's high enough for subtraction
+  const startNumber = Math.floor(Math.random() * (max / 2)) + subAmount1 + 1; 
   const steps = [];
   const answers = [];
   let currentVal = startNumber;
 
   for (let i = 0; i < 3; i++) {
-    // Filter to only include valid operations
-    const validOps = operations.filter(op => {
-      // If an operation has a 'requires' property, check if the current value meets it
-      // Otherwise, it's always valid (like addition)
-      return !op.requires || currentVal >= op.requires;
-    });
+    // 3. Filter for valid operations (don't go negative or excessively high)
+    const validOps = operations.filter(op => 
+        (!op.requires || currentVal >= op.requires) && 
+        (op.operation(currentVal) < max * 1.5)
+    );
 
-    // Choose a random operation from the valid list
-    const op = validOps[Math.floor(Math.random() * validOps.length)];
+    const op = validOps.length > 0 
+        ? validOps[Math.floor(Math.random() * validOps.length)]
+        // Fallback in case no operations are valid
+        : { text: '+ 1', operation: (n) => n + 1 };
     
     steps.push(op);
     currentVal = op.operation(currentVal);
@@ -382,12 +392,14 @@ const CORRECT_MESSAGES = ["Awesome!", "You got it!", "Super!", "Brilliant!", "Fa
 // --- Main Component ---
 const MathGame = () => {
   const [showReport, setShowReport] = useState(false);
-  const [maxTotal, setMaxTotal] = useState(10);
+  const [difficulty, setDifficulty] = useState('easy');
+  const maxTotal = DIFFICULTY_LEVELS[difficulty].max;
   const [gameMode, setGameMode] = useState('numberBond'); // 'numberBond', 'comparison', or 'pattern'
   const [patternProblem, setPatternProblem] = useState(() => generatePatternProblem(maxTotal * 2));
   const [filledPatternAnswer, setFilledPatternAnswer] = useState(null);
   const [comparisonProblem, setComparisonProblem] = useState(() => generateComparisonProblem(maxTotal));
   const [isComparisonHard, setIsComparisonHard] = useState(false);
+  const [isNumberBondHard, setIsNumberBondHard] = useState(false);
   const [filledOperator, setFilledOperator] = useState(null);
   const [weightProblem, setWeightProblem] = useState(() => generateWeightProblem(maxTotal));
   const [filledWeightAnswer, setFilledWeightAnswer] = useState(null);
@@ -429,23 +441,30 @@ const MathGame = () => {
   useEffect(() => {
     localStorage.setItem('mathGameStars', JSON.stringify(stars));
     localStorage.setItem('mathGameStarLevel', JSON.stringify(starLevel));
-  }, [stars, starLevel]);
+    }, [stars, starLevel]);
 
-  // Re-generate problem when maxTotal changes
-  useEffect(() => {
-    if (gameMode !== 'numberBond') return; // Only run for the number bond game
+    // Re-generate problem when maxTotal changes
+    useEffect(() => {
+    if (gameMode !== 'numberBond') return;
 
     let correctAnswer;
     if (stage === 'bond') {
       const { part1, part2, whole, blank } = problem;
       correctAnswer = blank === 'whole' ? whole : blank === 'left' ? part1 : part2;
-    } else { // stage is 'sentence'
+    } else {
       correctAnswer = sentences[currentSentenceIdx].answer;
     }
     
-    // Generate and set a fresh set of choices
     setNumberBondChoices(generateBondChoices(correctAnswer, maxTotal));
-  }, [problem, stage, currentSentenceIdx, gameMode, sentences, maxTotal]);
+  }, [
+    gameMode, 
+    stage, 
+    currentSentenceIdx, 
+    maxTotal, 
+    problem.whole, // Use specific, stable values
+    problem.blank,
+    sentences[currentSentenceIdx]?.answer // Use optional chaining for safety
+  ]);
 
   // Re-generate answer choices for mixedBond
   useEffect(() => {
@@ -463,27 +482,65 @@ const MathGame = () => {
   useEffect(() => {
     if (gameMode === 'numberLadder' || (gameMode === 'mixed' && mixedProblem.type === 'numberLadder')) {
       const problemSource = gameMode === 'mixed' ? mixedProblem.data : ladderProblem;
+      
       if (problemSource?.answers?.[ladderStep] !== undefined) {
         const correctAnswer = problemSource.answers[ladderStep];
-        const maxChoiceValue = Math.max(20, correctAnswer + 10); 
+        const maxChoiceValue = Math.max(maxTotal, correctAnswer + 10); 
         setLadderChoices(generateBondChoices(correctAnswer, maxChoiceValue));
       }
     }
-    // FIX: Make the dependency array more stable
-  }, [gameMode, ladderProblem, mixedProblem.data?.answers, ladderStep]);
+  }, [
+    gameMode, 
+    ladderStep, 
+    ladderProblem.startNumber, // Use a primitive value that changes with the problem
+    mixedProblem.data?.startNumber // Also use it for the mixed problem
+  ]);
 
   // Re-generate answer choices for weightPuzzle
   useEffect(() => {
     if (gameMode === 'weightPuzzle' || (gameMode === 'mixed' && mixedProblem.type === 'weightPuzzle')) {
       const problemSource = gameMode === 'mixed' ? mixedProblem.data : weightProblem;
+      
       if (problemSource?.answer !== undefined) {
         const correctAnswer = problemSource.answer;
         const maxChoiceValue = Math.max(maxTotal, correctAnswer + 5);
         setWeightPuzzleChoices(generateBondChoices(correctAnswer, maxChoiceValue));
       }
     }
-    // FIX: Make the dependency array more stable
-  }, [gameMode, weightProblem, mixedProblem.data?.answer, maxTotal]);
+  }, [
+    gameMode, 
+    maxTotal,
+    weightProblem.answer, // Use the specific answer
+    mixedProblem.data?.answer // Also for the mixed problem
+  ]);
+
+  // Move to next problem when difficulty level changes
+  useEffect(() => {
+    // Generate a new problem for the currently active game mode
+    switch (gameMode) {
+      case 'numberBond':
+        moveToNextProblem();
+        break;
+      case 'comparison':
+        setComparisonProblem(generateComparisonProblem(maxTotal));
+        break;
+      case 'pattern':
+        setPatternProblem(generatePatternProblem(maxTotal * 2));
+        break;
+      case 'weightPuzzle':
+        setWeightProblem(generateWeightProblem(maxTotal));
+        break;
+      case 'ladderProblem':
+        setLadderProblem(generateLadderProblem(maxTotal));
+        break;
+      case 'mixed':
+        moveToNextMixedProblem();
+        break;
+      // No action needed for shapePuzzle as it doesn't use maxTotal
+      default:
+        break;
+    }
+  }, [difficulty]);
 
   // --- NEXT PROBLEM FUNCTION ---
   const moveToNextProblem = useCallback(() => {
@@ -564,16 +621,26 @@ const MathGame = () => {
 
   // -- ANSWER HANDLER FOR NUMBER BOND AND NUMBER SENTENCES ---
   const handleAnswer = (value) => {
+    // 1. Determine the correct answer first.
     let correctAnswer;
     if (stage === "bond") {
       correctAnswer = problem.blank === "whole" ? problem.whole : problem.blank === "left" ? problem.part1 : problem.part2;
     } else {
       correctAnswer = sentences[currentSentenceIdx].answer;
     }
-    const isCorrect = value === correctAnswer;
-    updateStats('numberBond', isCorrect); // Use 'numberBond' for consistency
 
+    const isCorrect = value === correctAnswer;
+    updateStats('numberBond', isCorrect);
+
+    // 2. Use a single 'if (isCorrect)' block for all correct-answer logic.
     if (isCorrect) {
+      // MOVE the difficulty check inside here
+      const updatedStats = updateStats('numberBond', isCorrect);
+      if (updatedStats.correct >= 25) {
+        setIsNumberBondHard(true);
+      }
+      
+      // Now, run the rest of the correct answer logic
       const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
       setFeedback({ type: "correct", message: `✅ ${randomMessage}` });
 
@@ -583,10 +650,12 @@ const MathGame = () => {
         setFilledSentenceAnswer(correctAnswer);
       }
       
-      awardPoint();
+      awardPoint(); // This updates the progress bar
 
       const isGoalMet = (progress + 1) >= goal;
       const transitionDelay = isGoalMet ? 4000 : 1200;
+      
+      // This advances the game to the next stage/question
       setTimeout(() => {
         setFeedback({ type: "", message: "" });
         if (stage === 'bond') {
@@ -944,18 +1013,16 @@ const MathGame = () => {
             {/* --- The Question Area --- */}
             <div className="text-center min-h-[180px]">
               <div className="mb-4">
-                {maxTotal > 20 ? (
-                  <div className="flex justify-center gap-4">
-                    <BaseTenDisplay count={problem.part1} color="bg-sky-400" />
-                    <BaseTenDisplay count={problem.part2} color="bg-amber-400" />
-                  </div>
-                ) : (
-                  <CountingCubes 
-                    key={problemKey} 
-                    part1={problem.part1} 
-                    part2={problem.part2} 
-                  />
-                )}
+                {/* The logic is now inside CountingCubes! */}
+                <CountingCubes 
+                  key={problemKey} 
+                  part1={problem.part1} 
+                  part2={problem.part2}
+                  maxTotal={maxTotal}
+                  isNumberBondHard={isNumberBondHard}
+                  stage={stage}
+                  filledAnswer={filledAnswer}
+                />
               </div>
               {stage === 'bond' ? (
                 <NumberBond problem={problem} filledAnswer={filledAnswer} />
@@ -993,35 +1060,33 @@ const MathGame = () => {
             <div className="flex justify-around items-center text-center">
               {/* Left Side */}
               <div className="w-1/3">
-                {/* Conditionally render the cubes */}
                 {(!isComparisonHard || filledOperator !== null) && (
-                  maxTotal > 20 ? (
-                    <BaseTenDisplay count={comparisonProblem.num1} color="bg-sky-400" />
-                  ) : (
-                    <CubeDisplay count={comparisonProblem.num1} color="bg-sky-400" />
-                  )
+                  // This container ensures consistent height and alignment
+                  <div className="flex justify-center items-center flex-wrap gap-2 p-2 min-h-[100px]">
+                    {maxTotal > 19 ? (
+                      <BaseTenDisplay count={comparisonProblem.num1} color="bg-sky-400" />
+                    ) : (
+                      <CubeDisplay count={comparisonProblem.num1} color="bg-sky-400" />
+                    )}
+                  </div>
                 )}
                 <div className="text-6xl font-bold text-gray-700">{comparisonProblem.num1}</div>
               </div>
               
               {/* Middle Operator */}
-              <div className="w-1/3 flex justify-center items-center h-24">
-                {filledOperator ? (
-                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-6xl font-bold text-purple-600">{filledOperator}</motion.div>
-                ) : (
-                  <div className="w-20 h-20 border-4 border-dashed border-gray-300 rounded-full"></div>
-                )}
-              </div>
+              {/* ... */}
 
               {/* Right Side */}
               <div className="w-1/3">
-                {/* Conditionally render the cubes */}
                 {(!isComparisonHard || filledOperator !== null) && (
-                  maxTotal > 20 ? (
-                    <BaseTenDisplay count={comparisonProblem.num2} color="bg-amber-400" />
-                  ) : (
-                    <CubeDisplay count={comparisonProblem.num2} color="bg-amber-400" />
-                  )
+                  // Add the same container here
+                  <div className="flex justify-center items-center flex-wrap gap-2 p-2 min-h-[100px]">
+                    {maxTotal > 19 ? (
+                      <BaseTenDisplay count={comparisonProblem.num2} color="bg-amber-400" />
+                    ) : (
+                      <CubeDisplay count={comparisonProblem.num2} color="bg-amber-400" />
+                    )}
+                  </div>
                 )}
                 <div className="text-6xl font-bold text-gray-700">{comparisonProblem.num2}</div>
               </div>
@@ -1107,15 +1172,16 @@ const MathGame = () => {
                   <>
                     <div className="text-center min-h-[180px]">
                       <div className="mb-4">
-                        {/* Add the same conditional logic here */}
-                        {maxTotal > 20 ? (
-                          <div className="flex justify-center gap-4">
-                            <BaseTenDisplay count={data.part1} color="bg-sky-400" />
-                            <BaseTenDisplay count={data.part2} color="bg-amber-400" />
-                          </div>
-                        ) : (
-                          <CountingCubes part1={data.part1} part2={data.part2} />
-                        )}
+                        {/* The logic is now inside CountingCubes! */}
+                        <CountingCubes 
+                          key={problemKey} 
+                          part1={problem.part1} 
+                          part2={problem.part2}
+                          maxTotal={maxTotal}
+                          isNumberBondHard={isNumberBondHard}
+                          stage={`bond`}
+                          filledAnswer={filledAnswer}
+                        />
                       </div>
                       <NumberBond problem={data} filledAnswer={filledAnswer} />
                     </div>
@@ -1128,13 +1194,16 @@ const MathGame = () => {
                     <div className="flex justify-around items-center text-center">
                       {/* Left Side */}
                       <div className="w-1/3">
-                        {/* Conditionally render the cubes */}
                         {(!isComparisonHard || filledOperator !== null) && (
-                          maxTotal > 20 ? (
-                            <BaseTenDisplay count={comparisonProblem.num2} color="bg-amber-400" />
-                          ) : (
-                            <CubeDisplay count={comparisonProblem.num2} color="bg-amber-400" />
-                          )
+                          <div className="flex justify-center items-center flex-wrap gap-2 p-2 min-h-[100px]">
+                            {maxTotal > 19 ? (
+                              // FIX: Use data.num1
+                              <BaseTenDisplay count={data.num1} color="bg-sky-400" />
+                            ) : (
+                              // FIX: Use data.num1
+                              <CubeDisplay count={data.num1} color="bg-sky-400" />
+                            )}
+                          </div>
                         )}
                         <div className="text-6xl font-bold text-gray-700">{data.num1}</div>
                       </div>
@@ -1150,13 +1219,16 @@ const MathGame = () => {
 
                       {/* Right Side */}
                       <div className="w-1/3">
-                        {/* Conditionally render the cubes */}
                         {(!isComparisonHard || filledOperator !== null) && (
-                          maxTotal > 20 ? (
-                            <BaseTenDisplay count={comparisonProblem.num2} color="bg-amber-400" />
-                          ) : (
-                            <CubeDisplay count={comparisonProblem.num2} color="bg-amber-400" />
-                          )
+                          <div className="flex justify-center items-center flex-wrap gap-2 p-2 min-h-[100px]">
+                            {maxTotal > 19 ? (
+                              // FIX: Use data.num2
+                              <BaseTenDisplay count={data.num2} color="bg-amber-400" />
+                            ) : (
+                              // FIX: Use data.num2
+                              <CubeDisplay count={data.num2} color="bg-amber-400" />
+                            )}
+                          </div>
                         )}
                         <div className="text-6xl font-bold text-gray-700">{data.num2}</div>
                       </div>
@@ -1226,18 +1298,21 @@ const MathGame = () => {
       </motion.div>
 
       {/* --- Settings --- */}
-      <div className="mt-6 bg-white p-3 rounded-lg shadow-md flex items-center gap-4">
-        <div>
-          <label htmlFor="maxTotal" className="font-bold text-gray-600">Max Total: </label>
-          <input
-            type="number"
-            id="maxTotal"
-            value={maxTotal}
-            min={2}
-            max={99}
-            onChange={(e) => setMaxTotal(Number(e.target.value))}
-            className="w-16 p-1 border-2 border-gray-200 rounded-md text-center"
-          />
+      <div className="mt-6 bg-white p-4 rounded-lg shadow-md w-full max-w-sm flex flex-col items-center gap-4">
+        <div className="flex items-center gap-3">
+          <label htmlFor="difficulty-select" className="font-bold text-gray-600">Difficulty:</label>
+          <select
+            id="difficulty-select"
+            value={difficulty}
+            onChange={(e) => setDifficulty(e.target.value)}
+            className="difficulty-dropdown"
+          >
+            {Object.keys(DIFFICULTY_LEVELS).map(levelKey => (
+              <option key={levelKey} value={levelKey}>
+                {DIFFICULTY_LEVELS[levelKey].name}
+              </option>
+            ))}
+          </select>
         </div>
         {/* Add a button to show the report */}
         <button 

@@ -1,29 +1,60 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const BaseTenDisplay = ({ count, color }) => {
   const tens = Math.floor(count / 10);
   const ones = count % 10;
+  const [crossedOff, setCrossedOff] = useState(new Set());
+
+  const toggleCrossOff = (id) => {
+    setCrossedOff(prevCrossedOff => {
+      const newSet = new Set(prevCrossedOff);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
 
   return (
-    <div className="flex justify-center items-end gap-2 h-24">
-      {/* Container for the Ten Rods */}
-      <div className="flex items-end gap-1">
-        {Array.from({ length: tens }).map((_, index) => (
-          <div 
-            key={`ten-${index}`} 
-            className={`relative w-4 h-20 ${color} rounded-sm shadow-md border border-black/20 
-                        flex items-center justify-center text-xs font-bold text-gray-800`} // Added flex/justify for centering text
-          >
-            <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 select-none">10</span> 
-          </div>
-        ))}
-      </div>
+    // ADD a background color, border, and rounded corners to this wrapper
+    <div className="flex justify-center items-center flex-wrap gap-2 p-2 min-h-[100px] bg-gray-100 rounded-lg border-2 border-gray-200">
+      {/* Main container for the base-ten blocks */}
+      <div className="flex justify-center items-start gap-3 w-full">
+        {/* Group 1: Ten Rods */}
+        <div className="flex flex-wrap justify-center gap-1.5">
+          {Array.from({ length: tens }).map((_, rodIndex) => (
+            <div key={`ten-${rodIndex}`} className="flex flex-col-reverse gap-px">
+              {Array.from({ length: 10 }).map((_, cubeIndex) => {
+                const id = `ten-${rodIndex}-${cubeIndex}`;
+                const isCrossed = crossedOff.has(id);
+                return (
+                  <div 
+                    key={id}
+                    onClick={() => toggleCrossOff(id)}
+                    className={`w-6 h-[5.5px] ${color} rounded-sm cursor-pointer transition-opacity ${isCrossed ? 'opacity-30' : 'opacity-100'}`}
+                  />
+                );
+              })}
+            </div>
+          ))}
+        </div>
 
-      {/* Container for the Unit Cubes */}
-      <div className="flex flex-wrap-reverse gap-1 w-16">
-        {Array.from({ length: ones }).map((_, index) => (
-          <div key={`one-${index}`} className={`w-4 h-4 ${color} rounded-sm shadow-md border border-black/20`}></div>
-        ))}
+        {/* Group 2: Unit Cubes */}
+        <div className="flex flex-wrap justify-center gap-1">
+          {Array.from({ length: ones }).map((_, oneIndex) => {
+            const id = `one-${oneIndex}`;
+            const isCrossed = crossedOff.has(id);
+            return (
+              <div 
+                key={id}
+                onClick={() => toggleCrossOff(id)}
+                className={`w-6 h-6 ${color} rounded-sm cursor-pointer transition-opacity ${isCrossed ? 'opacity-30' : 'opacity-100'}`}
+              />
+            );
+          })}
+        </div>
       </div>
     </div>
   );

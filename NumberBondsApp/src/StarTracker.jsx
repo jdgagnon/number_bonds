@@ -89,7 +89,7 @@ const StarTracker = ({ count, level }) => {
   const maxStars = 5;
   const spinLevel = 12;
   const shootLevel = 23;
-  const isSpinning = level === spinLevel;
+  const isSpinning = level >= spinLevel;
   const isShooting = level >= shootLevel;
 
   return (
