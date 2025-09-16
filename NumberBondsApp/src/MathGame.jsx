@@ -574,65 +574,66 @@ const MathGame = () => {
   }, [maxTotal]);
 
   // This is the main function for all correct-answer logic
+  const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
   const handleCorrectAnswer = () => {
     const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
     setFeedback({ type: "correct", message: `✅ ${randomMessage}` });
 
     const currentGame = gameMode === 'mixed' ? mixedProblem.type : gameMode;
-    const requiredCorrect = 5;
 
     setLevelProgress(prev => {
-      const newCount = (prev[currentGame] || 0) + 1;
-      const nextLevelProgress = { ...prev, [currentGame]: newCount };
+      const gameData = prev[currentGame] || { correct: 0, stars: 0, level: 0, progress: 0 };
 
-      // If the new count is a multiple of 5, award a star
-      if (newCount > 0 && newCount % requiredCorrect === 0) {
-        setShowConfetti(true);
-        setTimeout(() => setShowConfetti(false), 4000);
-        setStars(prevStars => Math.min(5, prevStars + 1));
+      const newCorrect = gameData.correct + 1;
+      let newProgress = gameData.progress + 1;
+      let newStars = gameData.stars;
+      let newLevel = gameData.level;
+
+      if (newProgress >= 5) {
+        newProgress = 0;
+        if (newStars >= 5) {
+          newLevel += 1;
+          newStars = 0;
+          setShowConfetti(true);
+          setTimeout(() => setShowConfetti(false), 4000);
+        } else {
+          newStars += 1;
+        }
       }
 
-      // Check for level-up
-      const allGamesComplete = GAME_TYPES.every(
-        (game) => (nextLevelProgress[game] || 0) >= requiredCorrect
-      );
-
-      if (allGamesComplete) {
-        setStarLevel(prevLevel => prevLevel + 1);
-        setStars(0);
-        return {}; // Reset levelProgress
-      }
-
-      return nextLevelProgress;
+      return {
+        ...prev,
+        [currentGame]: { correct: newCorrect, stars: newStars, level: newLevel, progress: newProgress }
+      };
     });
   };
 
   // --- GENERAL INCORRECT ANSWER HANDLER ---
   const handleIncorrectAnswer = () => {
     setFeedback({ type: "incorrect", message: "❌ Oops, try again!" });
-    
+
     const currentGame = gameMode === 'mixed' ? mixedProblem.type : gameMode;
-    const requiredCorrect = 5;
 
     setLevelProgress(prev => {
-      const currentCount = prev[currentGame] || 0;
+      const gameData = prev[currentGame] || { correct: 0, stars: 0, level: 0, progress: 0 };
 
-      // If progress for this game is already at 0 or a multiple of 5...
-      if (currentCount === 0 || currentCount % requiredCorrect === 0) {
-        // ...then take away a star.
-        setStars(prevStars => {
-          if (prevStars > 0) {
-            return prevStars - 1;
-          }
-          // If no stars, level down
-          setStarLevel(prevLevel => Math.max(0, prevLevel - 1));
-          return 5;
-        });
-        return prev; // Don't change the levelProgress
+      let newProgress = gameData.progress;
+      let newStars = gameData.stars;
+      let newLevel = gameData.level;
+
+      if (newProgress > 0) {
+        newProgress -= 1;
+      } else if (newStars > 0) {
+        newStars -= 1;
+      } else if (newLevel > 0) {
+        newLevel -= 1;
+        newStars = 5;
       }
-      
-      // Otherwise, just decrement the progress for this game
-      return { ...prev, [currentGame]: currentCount - 1 };
+
+      return {
+        ...prev,
+        [currentGame]: { ...gameData, stars: newStars, level: newLevel, progress: newProgress }
+      };
     });
   };
 
@@ -904,10 +905,8 @@ const MathGame = () => {
 
   const activeSentence = sentences[currentSentenceIdx];
   const [partBefore, partAfter] = activeSentence.text.split('?');
-  const requiredCorrect = 5;
   const currentGame = gameMode === 'mixed' ? mixedProblem.type : gameMode;
-  const currentProgress = levelProgress[currentGame] || 0;
-  const isCurrentGameComplete = currentProgress >= requiredCorrect;
+  const currentGameProgress = levelProgress[currentGame] || { stars: 0, level: 0, progress: 0, correct: 0 };
 
   return (
     <div className="flex flex-col justify-center items-center min-h-screen bg-blue-50 font-sans p-4 overflow-x-hidden">
@@ -946,35 +945,22 @@ const MathGame = () => {
 
       {/* Conditionally render the Progress Report Modal */}
       {showReport && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4 overflow-y-auto">
+         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4 overflow-y-auto">
           <ProgressReport 
             onClose={() => setShowReport(false)} 
             onClear={() => {
-              setIsComparisonHard(false);
-              setIsNumberBondHard(false); // Also reset the number bond difficulty
-              setLevelProgress({}); // <-- Add this
+              setLevelProgress({}); // Clear the level progress on 'Clear'
             }}
-            stars={stars}
-            setStars={setStars}
-            starLevel={starLevel}
-            setStarLevel={setStarLevel}
-            setFeedback={setFeedback}
+            levelProgress={levelProgress} // Pass the progress object
+            setLevelProgress={setLevelProgress} // Pass the setter function
           />
         </div>
       )}
 
       {/* --- Star Tracker and Progress --- */}
       <div className="w-full max-w-sm mb-4 space-y-2">
-        {/* The ProgressTracker is now a more subtle summary */}
-        <ProgressTracker levelProgress={levelProgress} gameTypes={GAME_TYPES} goal={requiredCorrect} />
-        <StarTracker count={stars} level={starLevel} />
-        
-        {/* The ProgressBar now shows progress for the current game */}
-        <ProgressBar 
-          progress={Math.min(currentProgress, requiredCorrect)} // Don't show progress over the goal
-          goal={requiredCorrect} 
-          isComplete={isCurrentGameComplete} 
-        />
+        <StarTracker count={currentGameProgress.stars} level={currentGameProgress.level} />
+        <ProgressBar progress={currentGameProgress.progress} goal={5} />
       </div>
 
       {/* --- Main Game Card --- */}

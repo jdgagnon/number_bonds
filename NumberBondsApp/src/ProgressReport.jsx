@@ -1,16 +1,47 @@
 import React, { useState, useEffect } from 'react';
 
-const ProgressReport = ({ onClose, onClear, stars, setStars, starLevel, setStarLevel, setFeedback }) => { 
-  const [stats, setStats] = useState(null);
-  const [editableStars, setEditableStars] = useState(stars);
-  const [editableLevel, setEditableLevel] = useState(starLevel);
+const GAME_TYPES = ['numberBond', 'comparison', 'pattern', 'weightPuzzle', 'numberLadder', 'shapePuzzle'];
+
+const ProgressReport = ({ onClose, onClear, levelProgress, setLevelProgress }) => { 
+  const [editableStars, setEditableStars] = useState(0);
+  const [editableLevel, setEditableLevel] = useState(0);
+  const [selectedGame, setSelectedGame] = useState('');
 
   useEffect(() => {
-    const savedStats = JSON.parse(localStorage.getItem('mathGameStats'));
-    if (savedStats) {
-      setStats(savedStats);
+    if (selectedGame && levelProgress && levelProgress[selectedGame]) {
+      setEditableStars(levelProgress[selectedGame].stars || 0);
+      // FIX: Corrected the typo
+      setEditableLevel(levelProgress[selectedGame].level || 0);
+    } else {
+      setEditableStars(0);
+      setEditableLevel(0);
     }
-  }, []);
+  }, [selectedGame, levelProgress]);
+
+  const handleSaveData = () => {
+    if (!selectedGame) {
+      alert("Please select a game to edit.");
+      return;
+    }
+    
+    const newStars = Number(editableStars);
+    const newLevel = Number(editableLevel);
+
+    setLevelProgress(prev => {
+      const newProgress = {
+        ...prev,
+        [selectedGame]: {
+          ...(prev[selectedGame] || { correct: 0, progress: 0 }),
+          stars: newStars,
+          level: newLevel,
+        }
+      };
+      localStorage.setItem('mathGameLevelProgress', JSON.stringify(newProgress));
+      return newProgress;
+    });
+
+    alert("Rewards data saved!");
+  };
 
   const handleClearStats = () => {
     const isConfirmed = window.confirm(
@@ -20,94 +51,106 @@ const ProgressReport = ({ onClose, onClear, stars, setStars, starLevel, setStarL
     if (isConfirmed) {
       localStorage.removeItem('mathGameStats');
       localStorage.removeItem('mathGameLevelProgress');
-      setStats(null);
-      onClear();
+      if (onClear) {
+        onClear();
+      }
+      window.location.reload();
     }
-  };
-
-  const handleSaveStarData = () => {
-    const newStars = Number(editableStars);
-    const newLevel = Number(editableLevel);
-
-    setStars(newStars);
-    setStarLevel(newLevel);
-
-    localStorage.setItem('mathGameStars', JSON.stringify(newStars));
-    localStorage.setItem('mathGameStarLevel', JSON.stringify(newLevel));
-
-    onClose();
-
-    setFeedback({ type: "correct", message: "✅ Rewards Saved!" });
-
-    setTimeout(() => {
-      setFeedback({ type: "", message: "" });
-    }, 2000);
   };
 
   return (
     <div className="p-6 bg-white rounded-lg shadow-lg max-w-md w-full">
       <h2 className="text-3xl font-bold text-center text-purple-700 mb-6">Your Progress Report 📈</h2>
-      
-      {/* --- The stats display section --- */}
       <div className="space-y-4 max-h-72 overflow-y-auto pr-2">
-        {stats ? (
-          Object.entries(stats).map(([gameType, data]) => {
-            const percentCorrect = data.totalAttempts > 0 ? ((data.correct / data.totalAttempts) * 100).toFixed(0) : 0;
+        {levelProgress && Object.keys(levelProgress).length > 0 ? (
+          Object.entries(levelProgress).map(([gameType, data]) => {
+            const gameName = gameType.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+            const mainStats = JSON.parse(localStorage.getItem('mathGameStats')) || {};
+            const gameMainStats = mainStats[gameType] || { correct: 0, totalAttempts: 0 };
+            const percentCorrect = gameMainStats.totalAttempts > 0 
+              ? ((gameMainStats.correct / gameMainStats.totalAttempts) * 100).toFixed(0) 
+              : 0;
+            
             return (
               <div key={gameType} className="p-4 bg-gray-50 rounded-md border border-gray-200">
-                <h3 className="text-xl font-bold capitalize text-gray-800">{gameType.replace(/([A-Z])/g, ' $1')}</h3>
+                <h3 className="text-xl font-bold capitalize text-gray-800">{gameName}</h3>
                 <div className="flex justify-between items-center mt-2">
+                  <span className="text-gray-600">Level:</span>
+                  <span className="font-semibold text-purple-600">{data.level || 0}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Stars:</span>
+                  <span className="font-semibold text-yellow-500">{data.stars || 0} / 5</span>
+                </div>
+                <div className="flex justify-between items-center">
                   <span className="text-gray-600">Correctness:</span>
                   <span className="font-semibold text-green-600">{percentCorrect}%</span>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-500">Total Attempts:</span>
-                  <span className="font-semibold text-gray-500">{data.totalAttempts}</span>
                 </div>
               </div>
             );
           })
         ) : (
-          <p className="text-center text-gray-700">No game data yet. Play a few rounds!</p>
+          <p className="text-center text-gray-700">No data yet. Play a few rounds!</p>
         )}
       </div>
-
-      {/* --- Manual Editor Section (now always visible) --- */}
+      
+      {/* --- Manual Editor Section --- */}
       <div className="mt-6 p-4 border-t-2 border-gray-200">
         <h3 className="text-xl font-bold text-gray-800 mb-3 text-center">Edit Rewards</h3>
-        <div className="flex justify-around items-center gap-4">
-          <div className="flex flex-col">
-            <label htmlFor="stars-input" className="font-semibold text-gray-600">Stars</label>
-            <input
-              id="stars-input"
-              type="number"
-              value={editableStars}
-              onChange={(e) => setEditableStars(e.target.value)}
-              className="w-20 p-2 border-2 border-gray-300 rounded-md text-center"
-            />
+        {/* This container will now wrap its contents */}
+        <div className="flex flex-wrap justify-center items-center gap-4">
+          {/* Dropdown for game selection */}
+          <select 
+            onChange={(e) => setSelectedGame(e.target.value)} 
+            value={selectedGame} 
+            className="difficulty-dropdown"
+          >
+            <option value="">Select Game...</option>
+            {GAME_TYPES.map(gameType => {
+              const gameName = gameType.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+              return <option key={gameType} value={gameType}>{gameName}</option>;
+            })}
+          </select>
+          
+          {/* Group the two input fields together */}
+          <div className="flex items-center gap-2">
+            <div className="flex flex-col">
+              <label htmlFor="stars-input" className="font-semibold text-gray-600 text-sm text-center">Stars</label>
+              <input
+                id="stars-input"
+                type="number"
+                value={editableStars}
+                onChange={(e) => setEditableStars(e.target.value)}
+                className="w-20 p-2 border-2 border-gray-300 rounded-md text-center"
+              />
+            </div>
+            <div className="flex flex-col">
+              <label htmlFor="level-input" className="font-semibold text-gray-600 text-sm text-center">Level</label>
+              <input
+                id="level-input"
+                type="number"
+                value={editableLevel}
+                onChange={(e) => setEditableLevel(e.target.value)}
+                className="w-20 p-2 border-2 border-gray-300 rounded-md text-center"
+              />
+            </div>
           </div>
-          <div className="flex flex-col">
-            <label htmlFor="level-input" className="font-semibold text-gray-600">Level</label>
-            <input
-              id="level-input"
-              type="number"
-              value={editableLevel}
-              onChange={(e) => setEditableLevel(e.target.value)}
-              className="w-20 p-2 border-2 border-gray-300 rounded-md text-center"
-            />
-          </div>
+
+          {/* Save button */}
           <button 
-            onClick={handleSaveStarData} 
-            className="self-end px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600"
+            onClick={handleSaveData} 
+            className="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600"
           >
             Save
           </button>
         </div>
       </div>
-
-      {/* --- Buttons Section (now always visible) --- */}
+      
       <div className="flex justify-center items-center gap-4 mt-6 border-t-2 border-gray-200 pt-4">
-        <button onClick={onClose} className="px-6 py-2 bg-purple-600 text-white rounded-lg font-semibold">
+        <button 
+          onClick={onClose} 
+          className="px-6 py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700"
+        >
           Close
         </button>
         <button 
