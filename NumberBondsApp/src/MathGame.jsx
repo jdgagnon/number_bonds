@@ -379,7 +379,7 @@ const generateShapeProblem = () => {
   };
 };
 
-const updateStats = (gameType, isCorrect, setLevelProgress, setShowConfetti) => {
+const updateStats = (gameType, isCorrect) => {
   const stats = JSON.parse(localStorage.getItem('mathGameStats')) || {};
 
   if (!stats[gameType]) {
@@ -394,22 +394,6 @@ const updateStats = (gameType, isCorrect, setLevelProgress, setShowConfetti) => 
   }
 
   localStorage.setItem('mathGameStats', JSON.stringify(stats));
-
-  if (isCorrect) {
-    setLevelProgress(prevProgress => {
-      const newCount = (prevProgress[gameType] || 0) + 1;
-      const newLevelProgress = { ...prevProgress, [gameType]: newCount };
-      
-      const requiredCorrect = 5;
-      // If this answer completes the goal for THIS game, show confetti
-      if (newCount === requiredCorrect) {
-        setShowConfetti(true);
-        setTimeout(() => setShowConfetti(false), 4000);
-      }
-      
-      return newLevelProgress;
-    });
-  }
   return stats[gameType];
 };
 
@@ -592,46 +576,55 @@ const MathGame = () => {
     // REMOVED choice generation logic from here
   }, [maxTotal]);
 
-  // --- AWARD POINT FUNCTION ---
-  const awardPoint = () => {
-    setProgress(prevProgress => {
-      const newProgress = prevProgress + 1;
-      if (newProgress >= goal) {
-        setStars(prevStars => {
-          const newStars = Math.min(5, prevStars + 1);
-          localStorage.setItem('mathGameStars', JSON.stringify(newStars));
-          return newStars;
-        });
-        return 0; // Reset progress bar
-      }
-      return newProgress;
-    });
-  };
-
-  // --- GENERAL CORRECT ANSWER HANDLER ---
+  // This is the main function for all correct-answer logic
   const handleCorrectAnswer = () => {
     const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
     setFeedback({ type: "correct", message: `✅ ${randomMessage}` });
-    awardPoint();
 
     const currentGame = gameMode === 'mixed' ? mixedProblem.type : gameMode;
-    const nextLevelProgress = {
-      ...levelProgress,
-      [currentGame]: (levelProgress[currentGame] || 0) + 1
-    };
-    
     const requiredCorrect = 5;
-    const allGamesComplete = GAME_TYPES.every(game => (nextLevelProgress[game] || 0) >= requiredCorrect);
 
-    if (allGamesComplete) {
-      // Confetti logic is no longer needed here, but you can add an extra one for the level-up if you want
-      setStarLevel(prev => prev + 1);
-      setLevelProgress({});
-      setStars(0);
-      setProgress(0);
-      localStorage.setItem('mathGameStarLevel', JSON.stringify(starLevel + 1));
-      localStorage.setItem('mathGameStars', JSON.stringify(0));
-    }
+    setLevelProgress(prev => {
+      const newCount = (prev[currentGame] || 0) + 1;
+      const nextLevelProgress = { ...prev, [currentGame]: newCount };
+
+      if (newCount === requiredCorrect) {
+        setShowConfetti(true);
+        setTimeout(() => setShowConfetti(false), 4000);
+      }
+
+      const allGamesComplete = GAME_TYPES.every(game => (nextLevelProgress[game] || 0) >= requiredCorrect);
+
+      if (allGamesComplete) {
+        // --- LEVEL UP LOGIC ---
+        setStarLevel(prevLevel => {
+          const newLevel = prevLevel + 1;
+          localStorage.setItem('mathGameStarLevel', JSON.stringify(newLevel));
+          return newLevel;
+        });
+        setStars(0);
+        setProgress(0);
+        localStorage.setItem('mathGameStars', JSON.stringify(0));
+        return {}; // Reset levelProgress
+      } else {
+        // --- NORMAL POINT AWARD LOGIC ---
+        // This now runs only if a level-up did NOT happen
+        setProgress(prevProgress => {
+          const newProgress = prevProgress + 1;
+          if (newProgress >= goal) {
+            setStars(prevStars => {
+              const newStars = Math.min(5, prevStars + 1);
+              localStorage.setItem('mathGameStars', JSON.stringify(newStars));
+              return newStars;
+            });
+            return 0; // Reset progress bar
+          }
+          return newProgress;
+        });
+      }
+      
+      return nextLevelProgress;
+    });
   };
 
   // --- GENERAL INCORRECT ANSWER HANDLER ---
@@ -659,7 +652,6 @@ const MathGame = () => {
 
   // -- ANSWER HANDLER FOR NUMBER BOND AND NUMBER SENTENCES ---
   const handleAnswer = (value) => {
-    // 1. Determine the correct answer first.
     let correctAnswer;
     if (stage === "bond") {
       correctAnswer = problem.blank === "whole" ? problem.whole : problem.blank === "left" ? problem.part1 : problem.part2;
@@ -668,29 +660,22 @@ const MathGame = () => {
     }
 
     const isCorrect = value === correctAnswer;
-    updateStats('numberBond', isCorrect, setLevelProgress, setShowConfetti);
+    // Call updateStats only ONCE
+    const updatedStats = updateStats('numberBond', isCorrect);
 
-    // 2. Use a single 'if (isCorrect)' block for all correct-answer logic.
     if (isCorrect) {
-      // MOVE the difficulty check inside here
-      const updatedStats = updateStats('numberBond', isCorrect, setLevelProgress, setShowConfetti);
       if (updatedStats.correct >= 25) {
         setIsNumberBondHard(true);
       }
       
-      // Now, run the rest of the correct answer logic
-      const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
-      setFeedback({ type: "correct", message: `✅ ${randomMessage}` });
-
       if (stage === 'bond') {
         setFilledAnswer(correctAnswer);
       } else {
         setFilledSentenceAnswer(correctAnswer);
       }
-      handleCorrectAnswer();
-      awardPoint(); // This updates the progress bar
       
-      // This advances the game to the next stage/question
+      handleCorrectAnswer();
+      
       setTimeout(() => {
         setFeedback({ type: "", message: "" });
         if (stage === 'bond') {
@@ -710,13 +695,10 @@ const MathGame = () => {
   // --- ANSWER HANDLER for the pattern game ---
   const handlePatternAnswer = (choice) => {
     const isCorrect = choice === patternProblem.answer;
-    updateStats('pattern', isCorrect, setLevelProgress, setShowConfetti);
+    updateStats('pattern', isCorrect, setShowConfetti);
 
     if (isCorrect) {
-      const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
-      setFeedback({ type: "correct", message: `✅ ${randomMessage}` });
       setFilledPatternAnswer(choice);
-      awardPoint();
       handleCorrectAnswer();
       
       setTimeout(() => {
@@ -732,21 +714,20 @@ const MathGame = () => {
   // --- ANSWER HANDLER for the comparison game ---
   const handleComparisonAnswer = (op) => {
     const isCorrect = op === comparisonProblem.answer;
-    const updatedStats = updateStats('comparison', isCorrect, setLevelProgress, setShowConfetti);
-    if (updatedStats.correct >= 25) {
-      setIsComparisonHard(true);
-    }
-    if (op === comparisonProblem.answer) {
-      const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
-      setFeedback({ type: "correct", message: `✅ ${randomMessage}` });
+    const updatedStats = updateStats('comparison', isCorrect, setShowConfetti);
+
+    if (isCorrect) {
+      if (updatedStats.correct >= 25) {
+        setIsComparisonHard(true);
+      }
       setFilledOperator(op);
-      awardPoint();
+      handleCorrectAnswer();
       
       setTimeout(() => {
         setComparisonProblem(generateComparisonProblem(maxTotal));
         setFilledOperator(null);
         setFeedback({ type: "", message: "" });
-      }, 1200); // Use the calculated delay
+      }, 1200);
     } else {
       handleIncorrectAnswer();
     }
@@ -755,10 +736,12 @@ const MathGame = () => {
   // --- ANSWER HANDLER for the weight puzzle ---
   const handleWeightAnswer = (value) => {
     const isCorrect = value === weightProblem.answer;
-    updateStats('weight', isCorrect, setLevelProgress, setShowConfetti);
-    if (value === weightProblem.answer) {
-      setFilledWeightAnswer(value); // Fill in the answer
-      setPuzzleAnimation("animate-balance-correct"); // Trigger the animation
+    // FIX: Correct game name 'weightPuzzle'
+    updateStats('weightPuzzle', isCorrect, setShowConfetti);
+
+    if (isCorrect) {
+      setFilledWeightAnswer(value);
+      setPuzzleAnimation("animate-balance-correct");
       handleCorrectAnswer();
 
       setTimeout(() => {
@@ -788,20 +771,16 @@ const MathGame = () => {
 
   // --- ANSWER HANDLER for the number ladder ---
   const handleLadderAnswer = (value) => {
-    // 1. Determine correctness ONCE using the correct logic for the current step.
     const isCorrect = value === ladderProblem.answers[ladderStep];
-    
-    // 2. Update stats with the correct result.
-    updateStats('numberLadder', isCorrect, setLevelProgress, setShowConfetti);
+    updateStats('numberLadder', isCorrect, setShowConfetti);
 
-    // 3. Use the 'isCorrect' variable to proceed with the rest of the logic.
     if (isCorrect) {
       const newAnswers = [...filledLadderAnswers, value];
       setFilledLadderAnswers(newAnswers);
       
       if (ladderStep === ladderProblem.answers.length - 1) {
         handleCorrectAnswer();
-
+        // Logic for the final step
         setTimeout(() => {
           setLadderProblem(generateLadderProblem(maxTotal));
           setFilledLadderAnswers([]);
@@ -809,7 +788,8 @@ const MathGame = () => {
           setFeedback({ type: "", message: "" });
         }, 1200);
       } else {
-        awardPoint();
+        handleCorrectAnswer();
+        // Logic for intermediate steps
         setLadderStep(prevStep => prevStep + 1);
         setFeedback({ type: "", message: "" });
       }
@@ -821,9 +801,11 @@ const MathGame = () => {
   // --- ANSWER HANDLER for the shape puzzle ---
   const handleShapeAnswer = (value) => {
     const isCorrect = value === shapeProblem.answer;
-    updateStats('shape', isCorrect, setLevelProgress, setShowConfetti);
-    if (value === shapeProblem.answer) {
-      handleCorrectAnswer(); // <-- Use the new function here
+    // FIX: Correct game name 'shapePuzzle'
+    updateStats('shapePuzzle', isCorrect, setShowConfetti);
+
+    if (isCorrect) {
+      handleCorrectAnswer();
 
       setTimeout(() => {
         setShapeProblem(generateShapeProblem());
@@ -879,7 +861,7 @@ const MathGame = () => {
     }
 
     const isCorrect = value === correctAnswer;
-    const updatedStats = updateStats(type, isCorrect, setLevelProgress, setShowConfetti);
+    const updatedStats = updateStats(type, isCorrect, setShowConfetti);
     
     // Check the answer and proceed
     if (value === correctAnswer) {
