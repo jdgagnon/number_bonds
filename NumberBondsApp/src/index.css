@@ -182,3 +182,16 @@ body {
 .difficulty-dropdown:hover {
   border-color: #a855f7;
 }
+
+@keyframes sparkle-color-change {
+  0% { background-color: #fef08a; } /* Yellow */
+  25% { background-color: #60a5fa; } /* Blue */
+  50% { background-color: #4ade80; } /* Green */
+  75% { background-color: #f472b6; } /* Pink */
+  100% { background-color: #fef08a; } /* Back to Yellow */
+}
+
+.animate-sparkle-colors .sparkle {
+  /* This tells the existing sparkle animation to also use the color change */
+  animation: sparkle 2.5s ease-out infinite, sparkle-color-change 4s linear infinite;
+}

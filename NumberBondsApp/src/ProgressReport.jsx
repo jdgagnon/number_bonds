@@ -115,26 +115,36 @@ const ProgressReport = ({ onClose, onClear, levelProgress, setLevelProgress }) =
           {/* Group the two input fields together */}
           <div className="flex items-center gap-2">
             <div className="flex flex-col">
-              <label htmlFor="stars-input" className="font-semibold text-gray-600 text-sm text-center">Stars</label>
-              <input
-                id="stars-input"
-                type="number"
-                value={editableStars}
-                onChange={(e) => setEditableStars(e.target.value)}
-                className="w-20 p-2 border-2 border-gray-300 rounded-md text-center"
-              />
+              <label htmlFor="stars-select" className="font-semibold text-gray-600 text-sm text-center">Stars</label>
+                {/* NEW: Stars Dropdown */}
+                <select
+                  id="stars-select"
+                  value={editableStars}
+                  onChange={(e) => setEditableStars(e.target.value)}
+                  className="difficulty-dropdown"
+                >
+                  {/* Create options for 0 to 5 stars */}
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <option key={i} value={i}>{i}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="level-select" className="font-semibold text-gray-600 text-sm text-center">Level</label>
+                {/* NEW: Level Dropdown */}
+                <select
+                  id="level-select"
+                  value={editableLevel}
+                  onChange={(e) => setEditableLevel(e.target.value)}
+                  className="difficulty-dropdown"
+                >
+                  {/* Create options for level 0 to 50 */}
+                  {Array.from({ length: 51 }).map((_, i) => (
+                    <option key={i} value={i}>{i}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <div className="flex flex-col">
-              <label htmlFor="level-input" className="font-semibold text-gray-600 text-sm text-center">Level</label>
-              <input
-                id="level-input"
-                type="number"
-                value={editableLevel}
-                onChange={(e) => setEditableLevel(e.target.value)}
-                className="w-20 p-2 border-2 border-gray-300 rounded-md text-center"
-              />
-            </div>
-          </div>
 
           {/* Save button */}
           <button 

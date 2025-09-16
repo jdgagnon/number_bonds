@@ -15,6 +15,7 @@ import WeightPuzzle from './WeightPuzzle';
 import NumberLadder from './NumberLadder';
 import ShapePuzzle from './ShapePuzzle';
 import ProgressReport from './ProgressReport';
+import MasteryTracker from './MasteryTracker';
 
 // --- Helper Functions ---
 const GAME_TYPES = ['numberBond', 'comparison', 'pattern', 'weightPuzzle', 'numberLadder', 'shapePuzzle'];
@@ -959,6 +960,7 @@ const MathGame = () => {
 
       {/* --- Star Tracker and Progress --- */}
       <div className="w-full max-w-sm mb-4 space-y-2">
+        <MasteryTracker levelProgress={levelProgress} />
         <StarTracker count={currentGameProgress.stars} level={currentGameProgress.level} />
         <ProgressBar progress={currentGameProgress.progress} goal={5} />
       </div>
