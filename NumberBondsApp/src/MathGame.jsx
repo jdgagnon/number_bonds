@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import Confetti from "react-confetti";
 import { motion } from "framer-motion";
 import NumberBond from "./NumberBond";
-import NumberPad from "./NumberPad";
 import ProgressBar from "./ProgressBar";
 import ProgressTracker from "./ProgressTracker";
 import StarTracker from './StarTracker';
@@ -434,12 +433,10 @@ const MathGame = () => {
   const [sentences, setSentences] = useState(() => generateSentences(problem));
   const [stage, setStage] = useState("bond"); // 'bond' or 'sentence'
   const [feedback, setFeedback] = useState({ type: "", message: "" }); // 'correct' or 'incorrect'
-  const [progress, setProgress] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
   const [currentSentenceIdx, setCurrentSentenceIdx] = useState(0);
   const [filledAnswer, setFilledAnswer] = useState(null);
   const [filledSentenceAnswer, setFilledSentenceAnswer] = useState(null);
-  const goal = 5;
   const [stars, setStars] = useState(() => {
     const savedStars = localStorage.getItem('mathGameStars');
     return savedStars !== null ? JSON.parse(savedStars) : 0;
@@ -588,41 +585,24 @@ const MathGame = () => {
       const newCount = (prev[currentGame] || 0) + 1;
       const nextLevelProgress = { ...prev, [currentGame]: newCount };
 
-      if (newCount === requiredCorrect) {
+      // If the new count is a multiple of 5, award a star
+      if (newCount > 0 && newCount % requiredCorrect === 0) {
         setShowConfetti(true);
         setTimeout(() => setShowConfetti(false), 4000);
+        setStars(prevStars => Math.min(5, prevStars + 1));
       }
 
-      const allGamesComplete = GAME_TYPES.every(game => (nextLevelProgress[game] || 0) >= requiredCorrect);
+      // Check for level-up
+      const allGamesComplete = GAME_TYPES.every(
+        (game) => (nextLevelProgress[game] || 0) >= requiredCorrect
+      );
 
       if (allGamesComplete) {
-        // --- LEVEL UP LOGIC ---
-        setStarLevel(prevLevel => {
-          const newLevel = prevLevel + 1;
-          localStorage.setItem('mathGameStarLevel', JSON.stringify(newLevel));
-          return newLevel;
-        });
+        setStarLevel(prevLevel => prevLevel + 1);
         setStars(0);
-        setProgress(0);
-        localStorage.setItem('mathGameStars', JSON.stringify(0));
         return {}; // Reset levelProgress
-      } else {
-        // --- NORMAL POINT AWARD LOGIC ---
-        // This now runs only if a level-up did NOT happen
-        setProgress(prevProgress => {
-          const newProgress = prevProgress + 1;
-          if (newProgress >= goal) {
-            setStars(prevStars => {
-              const newStars = Math.min(5, prevStars + 1);
-              localStorage.setItem('mathGameStars', JSON.stringify(newStars));
-              return newStars;
-            });
-            return 0; // Reset progress bar
-          }
-          return newProgress;
-        });
       }
-      
+
       return nextLevelProgress;
     });
   };
@@ -630,24 +610,30 @@ const MathGame = () => {
   // --- GENERAL INCORRECT ANSWER HANDLER ---
   const handleIncorrectAnswer = () => {
     setFeedback({ type: "incorrect", message: "❌ Oops, try again!" });
+    
+    const currentGame = gameMode === 'mixed' ? mixedProblem.type : gameMode;
+    const requiredCorrect = 5;
 
-    if (progress > 0) {
-      setProgress(progress - 1);
-      return;
-    }
-    if (stars > 0) {
-      const newStars = stars - 1;
-      setStars(newStars);
-      // Add this missing line to save the new star count
-      localStorage.setItem('mathGameStars', JSON.stringify(newStars));
-      return;
-    }
+    setLevelProgress(prev => {
+      const currentCount = prev[currentGame] || 0;
 
-    const newLevel = Math.max(0, starLevel - 1);
-    setStarLevel(newLevel);
-    setStars(5);
-    localStorage.setItem('mathGameStarLevel', JSON.stringify(newLevel));
-    localStorage.setItem('mathGameStars', JSON.stringify(5));
+      // If progress for this game is already at 0 or a multiple of 5...
+      if (currentCount === 0 || currentCount % requiredCorrect === 0) {
+        // ...then take away a star.
+        setStars(prevStars => {
+          if (prevStars > 0) {
+            return prevStars - 1;
+          }
+          // If no stars, level down
+          setStarLevel(prevLevel => Math.max(0, prevLevel - 1));
+          return 5;
+        });
+        return prev; // Don't change the levelProgress
+      }
+      
+      // Otherwise, just decrement the progress for this game
+      return { ...prev, [currentGame]: currentCount - 1 };
+    });
   };
 
   // -- ANSWER HANDLER FOR NUMBER BOND AND NUMBER SENTENCES ---
@@ -916,7 +902,6 @@ const MathGame = () => {
     }
   };
 
-  const problemKey = `${problem.part1}-${problem.part2}-${currentSentenceIdx}`;
   const activeSentence = sentences[currentSentenceIdx];
   const [partBefore, partAfter] = activeSentence.text.split('?');
   const requiredCorrect = 5;
