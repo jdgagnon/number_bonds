@@ -7,6 +7,32 @@ const MasteryTracker = ({ levelProgress }) => {
   return (
     <div className="w-full max-w-sm p-3 bg-purple-200 rounded-lg shadow-md">
       <h3 className="text-center text-md font-bold text-purple-800 mb-2">Game Mastery</h3>
+      {/* ADD THIS SVG DEFINITION BLOCK */}
+      <svg width="0" height="0" className="absolute">
+        <defs>
+          <linearGradient id="rainbow" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style={{ stopColor: '#ef4444' }} />
+            <stop offset="50%" style={{ stopColor: '#8b5cf6' }} />
+            <stop offset="100%" style={{ stopColor: '#3b82f6' }} />
+          </linearGradient>
+          <linearGradient id="rainbow2" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style={{ stopColor: '#ef4444' }} />
+            <stop offset="17%" style={{ stopColor: '#f97316' }} />
+            <stop offset="34%" style={{ stopColor: '#eab308' }} />
+            <stop offset="51%" style={{ stopColor: '#22c55e' }} />
+            <stop offset="68%" style={{ stopColor: '#3b82f6' }} />
+            <stop offset="85%" style={{ stopColor: '#4f46e5' }} />
+            <stop offset="100%" style={{ stopColor: '#8b5cf6' }} />
+          </linearGradient>
+          <linearGradient id="rainbow3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style={{ stopColor: '#fb7185' }} />
+            <stop offset="25%" style={{ stopColor: '#facc15' }} />
+            <stop offset="50%" style={{ stopColor: '#4ade80' }} />
+            <stop offset="75%" style={{ stopColor: '#60a5fa' }} />
+            <stop offset="100%" style={{ stopColor: '#c084fc' }} />
+          </linearGradient>
+        </defs>
+      </svg>
       <div className="flex justify-around">
         {GAME_TYPES.map(gameType => {
           // Find the level for this specific game, default to 0
