@@ -195,3 +195,12 @@ body {
   /* This tells the existing sparkle animation to also use the color change */
   animation: sparkle 2.5s ease-out infinite, sparkle-color-change 4s linear infinite;
 }
+
+@keyframes shimmer {
+  0%, 100% { opacity: 0.7; transform: scale(0.95); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+.animate-shimmer {
+  animation: shimmer 1.5s ease-in-out infinite;
+}

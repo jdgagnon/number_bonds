@@ -1,34 +1,36 @@
 import React from 'react';
 
 const MASTERY_COLORS = [
-  { fill: 'fill-gray-300', stroke: 'stroke-gray-400' },     // Level 0
-  { fill: 'fill-orange-400', stroke: 'stroke-orange-600' }, // Level 1 (Bronze)
-  { fill: 'fill-slate-400', stroke: 'stroke-slate-600' },  // Level 2 (Silver)
-  { fill: 'fill-yellow-400', stroke: 'stroke-yellow-600' }, // Level 3 (Gold)
-  { fill: 'fill-cyan-400', stroke: 'stroke-cyan-600' },    // Level 4 (Diamond)
-  { fill: 'fill-fuchsia-400', stroke: 'stroke-fuchsia-600' }, // Level 5 (Amethyst)
-  { fill: 'fill-emerald-400', stroke: 'stroke-emerald-600' },// Level 6 (Emerald)
-  { fill: 'fill-rose-400', stroke: 'stroke-rose-600' },    // Level 7 (Ruby)
-  { fill: 'fill-[url(#rainbow)]', stroke: 'stroke-gray-500' },  // Level 8
-  { fill: 'fill-[url(#rainbow2)]', stroke: 'stroke-gray-500' }, // Level 9
-  { fill: 'fill-[url(#rainbow3)]', stroke: 'stroke-gray-500' }, // Level 10
+  { fill: 'fill-yellow-400', stroke: 'stroke-yellow-600' }, // Level 0
+  { fill: 'fill-cyan-400', stroke: 'stroke-cyan-600' },   // Level 1
+  { fill: 'fill-lime-400', stroke: 'stroke-lime-600' },   // Level 2
+  { fill: 'fill-fuchsia-400', stroke: 'stroke-fuchsia-600' }, // Level 3
+  { fill: 'fill-orange-400', stroke: 'stroke-orange-600' }, // Level 4
+  { fill: 'fill-[url(#rainbow1)]', stroke: 'stroke-gray-500' }, // Level 5 (rainbow1)
+  { fill: 'fill-[url(#rainbow2)]', stroke: 'stroke-gray-500' }, // Level 6 (rainbow2)
+  { fill: 'fill-[url(#rainbow3)]', stroke: 'stroke-gray-500' }, // Level 7 (rainbow3)
+  { fill: 'fill-[url(#rainbow4)]', stroke: 'stroke-gray-500' }, // Level 8 (rainbow4)
+  { fill: 'fill-[url(#rainbow5)]', stroke: 'stroke-gray-500' }, // Level 9 (rainbow5)
+  { fill: 'fill-[url(#rainbow6)]', stroke: 'stroke-gray-500' }, // Level 10 (rainbow6)
 ];
 
 const NUM_SPARKLES = 30;
 
 const MasteryStar = ({ level, gameType }) => {
   const displayLevel = level || 0;
-  
   const isSparkling = displayLevel >= 11;
   const isSpinning = displayLevel >= 23;
-
   const sparkleContainerClass = (isSparkling && !isSpinning) ? 'animate-sparkle-colors' : '';
   
-  // FIX: For levels 11+, loop through all colors using the modulo operator
-  const colorIndex = isSparkling ? (displayLevel - 11) % MASTERY_COLORS.length : Math.min(displayLevel, MASTERY_COLORS.length - 1);
-  const colors = MASTERY_COLORS[colorIndex];
-  const gameName = gameType.replace('Puzzle', '').replace('Bond', '').replace('Ladder', '');
-
+  let colors;
+  // If the level is 0, use a fixed gray color
+  if (displayLevel === 0) {
+    colors = { fill: 'fill-gray-300', stroke: 'stroke-gray-400' };
+  } else {
+    // For any level above 0, use the main color list.
+    // We subtract 1 because level 1 should match the first item (index 0).
+    colors = MASTERY_COLORS[(displayLevel - 1) % MASTERY_COLORS.length];
+  }
   return (
     <div className="flex flex-col items-center">
       {/* This container holds the star and sparkles for correct alignment */}

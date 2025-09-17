@@ -451,6 +451,8 @@ const MathGame = () => {
     const saved = localStorage.getItem('mathGameLevelProgress');
     return saved ? JSON.parse(saved) : {};
   });
+  const [showLevelUp, setShowLevelUp] = useState(false);
+  const [levelUpColor, setLevelUpColor] = useState('');
 
   // Effect to save levelProgress whenever it changes
   useEffect(() => {
@@ -575,7 +577,6 @@ const MathGame = () => {
   }, [maxTotal]);
 
   // This is the main function for all correct-answer logic
-  const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
   const handleCorrectAnswer = () => {
     const randomMessage = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
     setFeedback({ type: "correct", message: `✅ ${randomMessage}` });
@@ -595,17 +596,30 @@ const MathGame = () => {
         if (newStars >= 5) {
           newLevel += 1;
           newStars = 0;
+          setLevelUpColor('fill-yellow-400');
+          setShowLevelUp(true);
+          // Hide the modal after a few seconds
+          setTimeout(() => setShowLevelUp(false), 3000);
           setShowConfetti(true);
           setTimeout(() => setShowConfetti(false), 4000);
         } else {
           newStars += 1;
+          setShowConfetti(true);
+          setTimeout(() => setShowConfetti(false), 4000);
         }
       }
 
-      return {
+      // Create the new state object first
+      const newLevelProgress = {
         ...prev,
         [currentGame]: { correct: newCorrect, stars: newStars, level: newLevel, progress: newProgress }
       };
+
+      // ADD THIS LINE: Save the new state to localStorage
+      localStorage.setItem('mathGameLevelProgress', JSON.stringify(newLevelProgress));
+
+      // Return the new state
+      return newLevelProgress;
     });
   };
 
@@ -911,6 +925,29 @@ const MathGame = () => {
 
   return (
     <div className="flex flex-col justify-center items-center min-h-screen bg-blue-50 font-sans p-4 overflow-x-hidden">
+      {/* NEW: Conditionally render the Level Up Modal */}
+      {showLevelUp && (
+        <div className="fixed inset-0 flex flex-col justify-center items-center bg-black/60 z-50">
+          {/* The large shimmering star */}
+          <div className="animate-shimmer">
+            <svg width="150" height="150" viewBox="0 0 24 24" strokeWidth="1.5">
+              <polygon 
+                className={`${levelUpColor} stroke-white`}
+                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" 
+              />
+            </svg>
+          </div>
+          {/* The "Level Up!" text */}
+          <motion.h1 
+            className="text-7xl font-bold text-white drop-shadow-lg"
+            initial={{ scale: 0, y: 50 }}
+            animate={{ scale: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+          >
+            Level Up!
+          </motion.h1>
+        </div>
+      )}
       {/* --- Game Mode Switcher --- */}
       <div className="flex items-center gap-2 p-2 bg-purple-200 rounded-lg mb-4">
         <label htmlFor="game-mode-select" className="font-semibold text-purple-800">
