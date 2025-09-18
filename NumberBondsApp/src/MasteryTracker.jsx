@@ -1,7 +1,7 @@
 import React from 'react';
 import MasteryStar from './MasteryStar';
 
-const GAME_TYPES = ['numberBond', 'comparison', 'pattern', 'weightPuzzle', 'numberLadder', 'shapePuzzle'];
+const GAME_TYPES = ['numberBond', 'comparison', 'pattern', 'weightPuzzle', 'numberLadder', 'shapePuzzle', 'diceGame'];
 
 const MasteryTracker = ({ levelProgress }) => {
   return (

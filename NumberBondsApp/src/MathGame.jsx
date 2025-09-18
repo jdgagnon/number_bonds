@@ -16,9 +16,11 @@ import NumberLadder from './NumberLadder';
 import ShapePuzzle from './ShapePuzzle';
 import ProgressReport from './ProgressReport';
 import MasteryTracker from './MasteryTracker';
+import DiceGame from './DiceGame';
+import RollButton from './RollButton';
 
 // --- Helper Functions ---
-const GAME_TYPES = ['numberBond', 'comparison', 'pattern', 'weightPuzzle', 'numberLadder', 'shapePuzzle'];
+const GAME_TYPES = ['numberBond', 'comparison', 'pattern', 'weightPuzzle', 'numberLadder', 'shapePuzzle', 'diceGame'];
 const DIFFICULTY_LEVELS = {
   easy: { name: 'Easy', max: 10 },
   medium: { name: 'Medium', max: 20 },
@@ -49,6 +51,9 @@ const generateRandomProblem = (max) => {
       break;
     case 'shapePuzzle':
       problemData = generateShapeProblem();
+      break;
+    case 'diceGame':
+      problemData = generateDiceProblem();
       break;
     default:
       problemData = generateProblem(max); // Fallback
@@ -379,6 +384,17 @@ const generateShapeProblem = () => {
   };
 };
 
+const generateDiceProblem = () => {
+  const die1 = Math.floor(Math.random() * 6) + 1;
+  const die2 = Math.floor(Math.random() * 6) + 1;
+  const answer = die1 + die2;
+
+  // Use the existing function to generate multiple choice options
+  const choices = generateBondChoices(answer, 12);
+
+  return { die1, die2, answer, choices };
+};
+
 const updateStats = (gameType, isCorrect) => {
   const stats = JSON.parse(localStorage.getItem('mathGameStats')) || {};
 
@@ -453,6 +469,9 @@ const MathGame = () => {
   });
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [levelUpColor, setLevelUpColor] = useState('');
+  const [diceProblem, setDiceProblem] = useState(() => generateDiceProblem());
+  const [isRolling, setIsRolling] = useState(false);
+  const [rollComplete, setRollComplete] = useState(false);
 
   // Effect to save levelProgress whenever it changes
   useEffect(() => {
@@ -818,6 +837,32 @@ const MathGame = () => {
     }
   };
 
+  // --- ANSWER HANDLER for the dice game ---
+  const handleDiceAnswer = (value) => {
+    const isCorrect = value === diceProblem.answer;
+    updateStats('diceGame', isCorrect); // Log stats under 'diceGame'
+
+    if (isCorrect) {
+      handleCorrectAnswer();
+      setTimeout(() => {
+        setDiceProblem(generateDiceProblem());
+        setRollComplete(false); // Reset for the next round
+        setFeedback({ type: "", message: "" });
+      }, 1200);
+    } else {
+      handleIncorrectAnswer();
+    }
+  };
+
+  // --- HANDLER for the dice game roll ---
+  const handleRoll = () => {
+    setIsRolling(true);
+    setTimeout(() => {
+      setIsRolling(false);
+      setRollComplete(true);
+    }, 1000); // Roll for 1 second
+  };
+
   // Function to advance to the next mixed problem
   const moveToNextMixedProblem = useCallback(() => {
     setMixedProblem(generateRandomProblem(maxTotal));
@@ -829,6 +874,8 @@ const MathGame = () => {
     setFilledWeightAnswer(null);
     setPuzzleAnimation("");
     setLadderStep(0);
+    setIsRolling(false);
+    setRollComplete(false);
     setFeedback({ type: "", message: "" });
   }, [maxTotal]);
 
@@ -856,6 +903,9 @@ const MathGame = () => {
         correctAnswer = data.answers[ladderStep];
         break;
       case 'shapePuzzle':
+        correctAnswer = data.answer;
+        break;
+      case 'diceGame':
         correctAnswer = data.answer;
         break;
       default:
@@ -969,7 +1019,8 @@ const MathGame = () => {
             <option value="weightPuzzle">Weight Puzzle</option>
             <option value="numberLadder">Number Ladders</option>
             <option value="shapePuzzle">Shape Puzzles</option>
-            <option value="mixed">Mixed Review 🎲</option>
+            <option value="diceGame">Dice Game</option>
+            <option value="mixed">Mixed Review</option>
           </select>
           
           {/* Custom Arrow SVG Icon */}
@@ -1189,7 +1240,23 @@ const MathGame = () => {
               disabled={feedback.type === 'correct'}
             />
           </div>
-        ): (
+        ) : gameMode === 'diceGame' ? (
+          <div className="text-center">
+            <h3 className="text-2xl font-bold text-gray-600 mb-4">Roll the dice and find the sum!</h3>
+            <DiceGame die1={diceProblem.die1} die2={diceProblem.die2} isRolling={isRolling} />
+            
+            {/* Show the roll button OR the multiple choice answers */}
+            {!rollComplete ? (
+              <RollButton onClick={handleRoll} disabled={isRolling} />
+            ) : (
+              <MultipleChoice 
+                choices={diceProblem.choices}
+                onSelect={handleDiceAnswer}
+                disabled={feedback.type === 'correct'}
+              />
+            )}
+          </div>
+        ) : (
           // --- MIXED GAME UI ---
           (() => {
             const { type, data } = mixedProblem;
@@ -1318,6 +1385,23 @@ const MathGame = () => {
                       onSelect={handleMixedAnswer}  // Correct function
                       disabled={feedback.type === 'correct'}
                     />
+                  </div>
+                );
+              case 'diceGame':
+                return (
+                  <div className="text-center">
+                    <h3 className="text-2xl font-bold text-gray-600 mb-4">Roll the dice and find the sum!</h3>
+                    <DiceGame die1={data.die1} die2={data.die2} isRolling={isRolling} />
+                    
+                    {!rollComplete ? (
+                      <RollButton onClick={handleRoll} disabled={isRolling} />
+                    ) : (
+                      <MultipleChoice 
+                        choices={data.choices}
+                        onSelect={handleMixedAnswer}
+                        disabled={feedback.type === 'correct'}
+                      />
+                    )}
                   </div>
                 );
               default:

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const GAME_TYPES = ['numberBond', 'comparison', 'pattern', 'weightPuzzle', 'numberLadder', 'shapePuzzle'];
+const GAME_TYPES = ['numberBond', 'comparison', 'pattern', 'weightPuzzle', 'numberLadder', 'shapePuzzle', 'diceGame'];
 
 const ProgressReport = ({ onClose, onClear, levelProgress, setLevelProgress }) => { 
   const [editableStars, setEditableStars] = useState(0);
