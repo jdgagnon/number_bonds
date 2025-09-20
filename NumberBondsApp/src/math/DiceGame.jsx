@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useInterval } from './useInterval';
+import { useInterval } from '../components/useInterval';
 
 const Pip = () => <div className="w-4 h-4 bg-black rounded-full shadow-inner"></div>;
 

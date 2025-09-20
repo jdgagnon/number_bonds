@@ -1,21 +1,23 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Confetti from "react-confetti";
 import { motion } from "framer-motion";
+// --- Shared Components ---
+import ProgressBar from "../components/ProgressBar";
+import StarTracker from '../components/StarTracker';
+import MultipleChoice from '../components/MultipleChoice';
+import Feedback from '../components/Feedback';
+import ProgressReport from '../components/ProgressReport';
+import MasteryTracker from '../components/MasteryTracker';
+
+// --- Math Game Components ---
 import NumberBond from "./NumberBond";
-import ProgressBar from "./ProgressBar";
-import ProgressTracker from "./ProgressTracker";
-import StarTracker from './StarTracker';
 import CountingCubes from './CountingCubes';
 import OperatorButtons from './OperatorButtons';
 import CubeDisplay from './CubeDisplay';
 import BaseTenDisplay from './BaseTenDisplay';
-import MultipleChoice from './MultipleChoice';
-import Feedback from './Feedback';
 import WeightPuzzle from './WeightPuzzle';
 import NumberLadder from './NumberLadder';
 import ShapePuzzle from './ShapePuzzle';
-import ProgressReport from './ProgressReport';
-import MasteryTracker from './MasteryTracker';
 import DiceGame from './DiceGame';
 import RollButton from './RollButton';
 
